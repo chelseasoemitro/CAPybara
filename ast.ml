@@ -1,4 +1,10 @@
-type bop = Add | Sub | Equal | Neq | Less | And | Or
+type tokenseq = string list
+
+let string_of_program l =
+  "\n Scanned program: \n" ^ (List.fold_left (fun s e -> s ^ "\n" ^ e) " " l)
+
+
+(* type bop = Add | Sub | Equal | Neq | Less | And | Or
 
 type typ = Int | Bool
 
@@ -60,4 +66,4 @@ let string_of_program fdecl =
   "\n\nParsed program: \n\n" ^
   String.concat "" (List.map string_of_vdecl fdecl.locals) ^
   String.concat "" (List.map string_of_stmt fdecl.body) ^
-  "\n"
+  "\n" *)

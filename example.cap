@@ -1,0 +1,44 @@
+void main()
+{
+    int a = 9;
+    int b = 18;
+    while (a != b) {
+        if (b < a) {
+            a = a - b;
+        } else {
+            b = b - a; 
+        }
+    }
+    string s = "hello \t world \n"; 
+    char c = 'a';
+
+    int[4] x = [1,2,3,4];
+    int[4] y = [5,6,7,8];
+
+    // Element-wise addition
+    int[4] a = x + y; // [6, 8, 10, 12]
+
+    // Element-wise subtraction
+    int[4] b = y - x; // [4, 4, 4, 4] 
+
+    // Element-wise multiplication
+    int[4] c = x * y; // [5, 12, 21, 32]
+
+    int[2][3] m = [1,2,3; 4,5,6];
+    int[3][2] n = [1,2; 3,4; 5,6];
+
+    // Matrix multiplication
+    int[2][2] o = m @ n; // [22,28; 49,64] 
+
+    // Slicing
+    int[2][2] p = m[0:2, 0:2]; // [1, 2; 4, 5]
+
+    // Transpose 
+    int[3][2] t = transpose(m); // [1,4; 2,5; 3,6]
+
+    // Length
+    int n_rows = length(t); // 3
+    int n_cols = length(t[0]); // 2 
+}
+
+
