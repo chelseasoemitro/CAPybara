@@ -29,7 +29,7 @@ rule token = parse
 (* Arithmetic operators *)
 | '+'      { PLUS }
 | '-'      { MINUS }
-| '*'      { MUL }
+| '*'      { MULT }
 | '/'      { DIV }
 | '%'      { MOD }
 | "**"     { POW }
@@ -76,7 +76,7 @@ rule token = parse
 
 (* Array operators *)
 | ':'      { COLON }
-| '@'      { MMUL }
+| '@'      { MMULT }
 | "length"    { LENGTH }      
 | "transpose" { TRANSPOSE }
 | "map"       { MAP }

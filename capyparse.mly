@@ -11,7 +11,7 @@ open Ast
 %token SEMI COMMA
 
 (* Arithmetic operators *)
-%token PLUS MINUS MUL DIV MOD POW
+%token PLUS MINUS MULT DIV MOD POW
 
 (* Assignment *)
 %token ASSIGN
@@ -36,7 +36,7 @@ open Ast
 %token <string> STRING_LIT
 
 (* Array Operators *)
-%token COLON MMUL LENGTH TRANSPOSE MAP REDUCE
+%token COLON MMULT LENGTH TRANSPOSE MAP REDUCE
 
 %token <string> ID
 %token EOF
@@ -53,8 +53,8 @@ open Ast
 %left EQ NEQ
 %left LT GT LE GE
 %left PLUS MINUS 
-%left MUL DIV MOD
-%left MMUL
+%left MULT DIV MOD
+%left MMULT
 %left COLON 
 %left LENGTH TRANSPOSE MAP REDUCE
 %right NOT
@@ -82,7 +82,7 @@ one_token:
   | COMMA { "COMMA" }
   | PLUS { "PLUS" }
   | MINUS { "MINUS" }
-  | MUL { "MUL" }
+  | MULT { "MULT" }
   | DIV { "DIV" }
   | MOD { "MOD" }
   | POW { "POW"} 
@@ -115,7 +115,7 @@ one_token:
 
   | STRING_LIT { "STRING: " ^ $1}
   | COLON { "COLON" }
-  | MMUL { "MMUL" }
+  | MMULT { "MMULT" }
   | LENGTH { "LENGTH" }
   | TRANSPOSE { "TRANSPOSE" }
   | MAP { "MAP" }
