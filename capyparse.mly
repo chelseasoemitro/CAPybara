@@ -186,6 +186,7 @@ stmt:
   /* if (condition) { block1} else {block2} */
   /* if (condition) stmt else stmt */
   | IF L_PAREN expr R_PAREN stmt ELSE stmt    { If($3, $5, $7) }
+  | IF L_PAREN expr R_PAREN stmt              { If($3, $5, NoExpr)}
   | FOR L_PAREN expr SEMI expr SEMI expr R_PAREN stmt { For($3, $5, $7, $9) }
   | WHILE L_PAREN expr R_PAREN stmt           { While ($3, $5)  }
   /* return */
