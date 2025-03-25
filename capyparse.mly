@@ -145,15 +145,15 @@ typ:
   | CHAR { Char }
   | STRING { String }
   | VOID { Void }
-  | typ arr_index { Arr($1, [$2]) }
-  | typ arr_index arr_index { Arr($1, [$2 :: $3]) }
+  | typ arr_index { Arr1D($1, $2) }
+  | typ arr_index arr_index { Arr2D($1, $2, $3) }
 
 arr_index:
-  L_SQBRACE INT_LIT R_SQBRACE { $2 }
+  L_SQBRACE expr R_SQBRACE { $2 }
 
 /* fdecl */
 fdecl:
-  vdecl LPAREN formals_opt RPAREN LBRACE stmt_list RBRACE
+  vdecl L_PAREN formals_opt R_PAREN L_CBRACE stmt_list R_CBRACE
   {
     {
       rtyp=fst $1;
@@ -182,30 +182,66 @@ vdecl_stmt:
 
 stmt:
     expr SEMI                               { Expr $1      }
-  | LBRACE stmt_list RBRACE                 { Block $2 }
+  | L_CBRACE stmt_list R_CBRACE                 { Block $2 }
   /* if (condition) { block1} else {block2} */
   /* if (condition) stmt else stmt */
-  | IF LPAREN expr RPAREN stmt ELSE stmt    { If($3, $5, $7) }
-  | WHILE LPAREN expr RPAREN stmt           { While ($3, $5)  }
+  | IF L_PAREN expr R_PAREN stmt ELSE stmt    { If($3, $5, $7) }
+  | FOR L_PAREN expr SEMI expr SEMI expr R_PAREN stmt { For($3, $5, $7, $9) }
+  | WHILE L_PAREN expr R_PAREN stmt           { While ($3, $5)  }
   /* return */
   | RETURN expr SEMI                        { Return $2      }
+  | BREAK SEMI                              { Break }
   | vdecl_stmt SEMI                              { $1 } 
 
+expr_list:
+  expr { [$1] }
+  | expr COMMA expr_list { $1::$3 }
+
+expr_list_2D:
+  expr_list { [$1] }
+  | expr_list SEMI expr_list_2D { $1::$3 }  
+
 expr:
-    LITERAL          { Literal($1)            }
-  | BLIT             { BoolLit($1)            }
+    INT_LIT          { IntLit($1)            }
+  | DOUBLE_LIT       { DoubleLit($1) }
+  | BOOL_LIT             { BoolLit($1)            }
+  | CHAR_LIT          { CharLit($1)            }
+  | STRING_LIT        { StringLit($1) }
+  | L_SQBRACE expr_list R_SQBRACE {Arr1DLit($2)}
+  | L_SQBRACE expr_list_2D R_SQBRACE    { Arr2DLit($2) }
   | ID               { Id($1)                 }
   | expr PLUS   expr { Binop($1, Add,   $3)   }
   | expr MINUS  expr { Binop($1, Sub,   $3)   }
+  | expr MULT   expr { Binop($1, Mult,  $3)   }
+  | expr DIV    expr { Binop ($1, Div, $3)    }
+  | expr MOD    expr { Binop($1, Mod, $3)     }
+  | expr POW    expr { Binop($1, Pow, $3)     }
   | expr EQ     expr { Binop($1, Equal, $3)   }
   | expr NEQ    expr { Binop($1, Neq, $3)     }
-  | expr LT     expr { Binop($1, Less,  $3)   }
+  | expr LT     expr { Binop($1, Lt,  $3)     }
+  | expr GT     expr { Binop($1, Gt, $3)      }
+  | expr LE     expr { Binop($1, Le, $3)      }
+  | expr GE     expr { Binop($1, Ge, $3)      }
   | expr AND    expr { Binop($1, And,   $3)   }
   | expr OR     expr { Binop($1, Or,    $3)   }
+  | expr MMULT  expr { Binop($1, Mmult, $3)   }
+  | NOT         expr { Uop($2)                }
+  | NEG         expr { Uop($2)                }
   | ID ASSIGN expr   { Assign($1, $3)         }
-  | LPAREN expr RPAREN { $2                   }
+  | L_PAREN expr R_PAREN        { $2                   }
   /* call */
-  | ID LPAREN args_opt RPAREN { Call ($1, $3)  }
+  | ID L_PAREN args_opt R_PAREN { Call ($1, $3)  }
+  /* array */
+  | ID arr_index ASSIGN expr                { Arr1DAssign($1, $2, $4)}    
+  | ID arr_index arr_index ASSIGN expr      { Arr2DAssign($1, $2, $3, $5 )}
+  | ID arr_index                            { Arr1DAccess($1, $2)        }
+  | ID arr_index arr_index                  { Arr2DAccess($1, $2, $3)    }
+  | LENGTH L_PAREN expr R_PAREN             { ArrUop(Length, $3)    }
+  | TRANSPOSE L_PAREN expr R_PAREN          { ArrUop(Transpose, $3) }
+  | MAP L_PAREN expr COMMA expr R_PAREN     { ArrOp(Map, $3, $5)    }
+  | REDUCE L_PAREN expr COMMA expr R_PAREN  { ArrOp(Reduce, $3, $5) }
+  | ID L_SQBRACE expr COLON expr R_SQBRACE  { Arr1DSlice($1, $3, $5)}
+  | ID L_SQBRACE expr COLON expr R_SQBRACE L_SQBRACE expr COLON expr R_SQBRACE  { Arr2DSlice($1, $3, $5, $8, $10)}
 
 /* args_opt*/
 args_opt:
@@ -215,44 +251,3 @@ args_opt:
 args:
   expr  { [$1] }
   | expr COMMA args { $1::$3 }
-
-
-// NANOC
-// program_rule:
-//   vdecl_list_rule stmt_list_rule EOF { {locals=$1; body=$2} }
-
-// vdecl_list_rule:
-//   /*nothing*/                   { []       }
-//   | vdecl_rule vdecl_list_rule  { $1 :: $2 }
-
-// vdecl_rule:
-//   typ_rule ID SEMI { ($1, $2) }
-
-
-// typ_rule:
-//   INT       { Int  }
-//   | BOOL    { Bool }
-
-// stmt_list_rule:
-//     /* nothing */               { []     }
-//     | stmt_rule stmt_list_rule  { $1::$2 }
-
-// stmt_rule:
-//   expr_rule SEMI                                          { Expr $1         }
-//   | LBRACE stmt_list_rule RBRACE                          { Block $2        }
-//   | IF LPAREN expr_rule RPAREN stmt_rule ELSE stmt_rule   { If ($3, $5, $7) }
-//   | WHILE LPAREN expr_rule RPAREN stmt_rule               { While ($3,$5)   }
-
-// expr_rule:
-//   | BLIT                          { BoolLit $1            }
-//   | LITERAL                       { Literal $1            }
-//   | ID                            { Id $1                 }
-//   | expr_rule PLUS expr_rule      { Binop ($1, Add, $3)   }
-//   | expr_rule MINUS expr_rule     { Binop ($1, Sub, $3)   }
-//   | expr_rule EQ expr_rule        { Binop ($1, Equal, $3) }
-//   | expr_rule NEQ expr_rule       { Binop ($1, Neq, $3)   }
-//   | expr_rule LT expr_rule        { Binop ($1, Less, $3)  }
-//   | expr_rule AND expr_rule       { Binop ($1, And, $3)   }
-//   | expr_rule OR expr_rule        { Binop ($1, Or, $3)    }
-//   | ID ASSIGN expr_rule           { Assign ($1, $3)       }
-//   | LPAREN expr_rule RPAREN       { $2                    }
