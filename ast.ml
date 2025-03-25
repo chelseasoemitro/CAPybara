@@ -15,7 +15,7 @@ type arrop = Map | Reduce
 
 type arruop = Length | Transpose
 
-type typ = Int | Double | Bool | Char | String | Arr of typ * int list (* int list: list of dimensions *) | Void
+type typ = Int | Double | Bool | Char | String | Arr1D of typ * int | Arr2D of typ * int * int | Void
 
 type expr =
   | IntLit of int
@@ -23,25 +23,28 @@ type expr =
   | BoolLit of bool
   | CharLit of char
   | StringLit of string
-  | ArrLit of expr list
+  | Arr1DLit of expr list
+  | Arr2DLit of expr list list
   | Id of string
   | Binop of expr * bop * expr
   | Uop of uop * expr
   | Assign of string * expr
   | Call of string * expr list
-  | ArrAssign of string * expr list * expr      (* string: array id, expr list: list of indices, expr: value *)
-  | ArrAccess of string * expr list             (* string: array id, expr list: list of indices *)
-  | ArrUop of arruop * string 
+  | Arr1DAssign of string * expr * expr               (* string: array id, expr: index, expr: value*)
+  | Arr2DAssign of string * expr * expr * expr        (* string: array id, expr: row index, expr: col index, expr: value *) 
+  | Arr1DAccess of string * expr                      (* string: array id, expr list: list of indices *)
+  | Arr2DAccess of string * expr * expr               (* string: array id, expr list: list of indices *)
+  | ArrUop of arruop * string
   | ArrOp of arrop * string * string
-  | ArrSlice of string * (expr * expr) list     (* string: array id, expr * expr list: of (start:end) pairs for slicing *)
-  | NoExpr                                      (* is this necessary? *)
+  | Arr1DSlice of string * expr * expr                (* string: array id, expr: start index, expr: end index *)
+  | Arr2DSlice of string * expr * expr * expr * expr  (* string: array id, expr: start row index, expr: end row index, expr: start col index, expr: end col index *)
+  | NoExpr                                            (* is this necessary? maybe for empty else statements *)
 
-  
 type stmt =
   | Block of stmt list
   | Expr of expr
   | If of expr * stmt * stmt
-  | For of expr * expr * expr * stmt 
+  | For of expr * expr * expr * stmt
   | While of expr * stmt
   | Return of expr
   | Break
@@ -53,8 +56,7 @@ type bind = typ * string
 type func_def = {
   rtyp: typ;
   fname: string;
-  formals: bind list;
-  locals: bind list;
+  formals: bind list; (* parameters *)
   body: stmt list;
 }
 
