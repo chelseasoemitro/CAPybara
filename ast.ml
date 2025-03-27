@@ -3,7 +3,6 @@
 let string_of_program l =
   "\n Scanned program: \n" ^ (List.fold_left (fun s e -> s ^ "\n" ^ e) " " l) *)
 
-
 type bop = Add | Sub | Mult | Div | Mod | Pow | 
             Equal | Neq | Lt | Gt | Le | Ge | 
             And | Or | 
@@ -62,7 +61,6 @@ type func_def = {
 
 type program = bind list * func_def list
 
-
 (* Pretty-printing functions *)
 let string_of_op = function
     Add -> "+"
@@ -93,37 +91,44 @@ let string_of_arruop = function
     Length -> "length"
   | Transpose -> "transpose"
 
-
-let rec string_of_expr = function
-    IntLit(l) -> string_of_int l
+  let rec string_of_expr = function
+  | IntLit(l) -> string_of_int l
   | DoubleLit(l) -> string_of_float l
   | BoolLit(true) -> "true"
   | BoolLit(false) -> "false"
   | CharLit(c) -> String.make 1 c
   | StringLit(s) -> s
-  | ArrLit(a) -> 
-    "[" ^ String.concat ", " (List.map string_of_expr a) ^ "]"
+  | Arr1DLit(a) -> 
+      "[" ^ String.concat ", " (List.map string_of_expr a) ^ "]"
+  | Arr2DLit(a) ->
+      "[" ^ String.concat ", " (List.map (fun row -> 
+          "[" ^ String.concat ", " (List.map string_of_expr row) ^ "]"
+      ) a) ^ "]"
   | Id(s) -> s
   | Binop(e1, o, e2) ->
-    string_of_expr e1 ^ " " ^ string_of_op o ^ " " ^ string_of_expr e2
+      string_of_expr e1 ^ " " ^ string_of_op o ^ " " ^ string_of_expr e2
   | Uop(o, e) ->
-    string_of_uop o ^ " " ^ string_of_expr e
+      string_of_uop o ^ " " ^ string_of_expr e
   | Assign(v, e) -> v ^ " = " ^ string_of_expr e
   | Call(f, el) ->
-    f ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
-  | ArrOp(o, s1, s2) -> string_of_arrop o ^ "(" ^ s1 ^ ", " ^ s2 ^ ")" 
-  | ArrUop(o, a) -> string_of_arruop o ^ "(" ^ a ^ ")"
-  | ArrAssign (a, indices, value) -> 
-      a ^ "[" ^ 
-      String.concat ", " (List.map string_of_expr indices) ^ "] = " ^ string_of_expr value
-  | ArrAccess (a, indices) -> 
-      a ^ "[" ^ 
-      String.concat ", " (List.map string_of_expr indices) ^ "]"
-  | ArrSlice (arr_name, slices) -> 
-      arr_name ^ "[" ^ 
-      String.concat ", " 
-        (List.map (fun (s, e) -> string_of_expr s ^ ":" ^ string_of_expr e) slices) 
-      ^ "]"
+      f ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
+  | ArrOp(o, s1, s2) -> 
+      string_of_arrop o ^ "(" ^ s1 ^ ", " ^ s2 ^ ")"
+  | ArrUop(o, a) -> 
+      string_of_arruop o ^ "(" ^ a ^ ")"
+  | Arr1DAssign(a, idx, value) -> 
+      a ^ "[" ^ string_of_expr idx ^ "] = " ^ string_of_expr value
+  | Arr2DAssign(a, idx1, idx2, value) -> 
+      a ^ "[" ^ string_of_expr idx1 ^ "][" ^ string_of_expr idx2 ^ "] = " ^ string_of_expr value
+  | Arr1DAccess(a, idx) -> 
+      a ^ "[" ^ string_of_expr idx ^ "]"
+  | Arr2DAccess(a, idx1, idx2) -> 
+      a ^ "[" ^ string_of_expr idx1 ^ "][" ^ string_of_expr idx2 ^ "]"
+  | Arr1DSlice(a, start_idx, end_idx) ->
+      a ^ "[" ^ string_of_expr start_idx ^ ":" ^ string_of_expr end_idx ^ "]"
+  | Arr2DSlice(a, start_row, end_row, start_col, end_col) ->
+      a ^ "[" ^ string_of_expr start_row ^ ":" ^ string_of_expr end_row ^ "][" 
+              ^ string_of_expr start_col ^ ":" ^ string_of_expr end_col ^ "]"
   | NoExpr -> ""
 
 
@@ -137,37 +142,37 @@ let rec string_of_stmt = function
   | For(e1, e2, e3, s) -> "for (" ^ string_of_expr e1 ^ ";" ^ string_of_expr e2 ^ "; " ^ string_of_expr e3 ^ ") " ^ string_of_stmt s
   | Return(expr) -> "return " ^ string_of_expr expr ^ ";\n"
   | Break -> "break"
+  (* TODO: add vdecl statement?*)
 
-  
+
 let rec string_of_typ = function
     Int -> "int"
   | Double -> "double"
   | Bool -> "bool"
   | Char -> "char"
   | String -> "string"
-  | Arr (t, i) -> 
-      let t_str = string_of_typ t in
-        let i_str =
-          i
-          |> List.map string_of_int
-          |> String.concat "]["
-        in
-        t_str ^ "[" ^ i_str ^  "]"
+  | Arr1D (t, i) ->
+    let t_str = string_of_typ t in
+    t_str ^ "[" ^ string_of_int i ^ "]"
+  | Arr2D (t, i1, i2) ->
+    let t_str = string_of_typ t in
+    t_str ^ "[" ^ string_of_int i1 ^ "][" ^ string_of_int i2 ^ "]"
   | Void -> "void"
 
   
 let string_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n"
 
+
 let string_of_fdecl fdecl =
   string_of_typ fdecl.rtyp ^ " " ^
   fdecl.fname ^ "(" ^ String.concat ", " (List.map snd fdecl.formals) ^
   ")\n{\n" ^
-  String.concat "" (List.map string_of_vdecl fdecl.locals) ^
+  (* String.concat "" (List.map string_of_vdecl fdecl.locals) ^ *)
   String.concat "" (List.map string_of_stmt fdecl.body) ^
   "}\n"
 
-let string_of_program (vars, funcs) =
-  "\n\nParsed program: \n\n" ^
-  String.concat "" (List.map string_of_vdecl vars) ^
-  String.concat "" (List.map string_of_stmt funcs) ^
-  "\n"
+
+  let string_of_program (vars, funcs) =
+    "\n\nParsed program: \n\n" ^
+    String.concat "" (List.map string_of_vdecl vars) ^ "\n" ^
+    String.concat "\n" (List.map string_of_fdecl funcs)
