@@ -1,8 +1,3 @@
-(* type tokenseq = string list
-
-let string_of_program l =
-  "\n Scanned program: \n" ^ (List.fold_left (fun s e -> s ^ "\n" ^ e) " " l) *)
-
 type bop = Add | Sub | Mult | Div | Mod | Pow | 
             Equal | Neq | Lt | Gt | Le | Ge | 
             And | Or | 
@@ -45,7 +40,7 @@ type bind_init = bind_decl * expr
 type bind =
   BindDecl of bind_decl
 | BindInit of bind_init
-  
+
 
 type stmt =
   | Block of stmt list
@@ -109,7 +104,7 @@ let string_of_arruop = function
       "[" ^ String.concat ", " (List.map string_of_expr a) ^ "]"
   | Arr2DLit(a) ->
       "[" ^ String.concat ", " (List.map (fun row -> 
-          "[" ^ String.concat ", " (List.map string_of_expr row) ^ "]"
+          String.concat ", " (List.map string_of_expr row) ^ ";"
       ) a) ^ "]"
   | Id(s) -> s
   | Binop(e1, o, e2) ->
@@ -134,8 +129,8 @@ let string_of_arruop = function
   | Arr1DSlice(a, start_idx, end_idx) ->
       a ^ "[" ^ string_of_expr start_idx ^ ":" ^ string_of_expr end_idx ^ "]"
   | Arr2DSlice(a, start_row, end_row, start_col, end_col) ->
-      a ^ "[" ^ string_of_expr start_row ^ ":" ^ string_of_expr end_row ^ "][" 
-              ^ string_of_expr start_col ^ ":" ^ string_of_expr end_col ^ "]"
+    a ^ "[" ^ string_of_expr start_row ^ ":" ^ string_of_expr end_row ^ ", " 
+            ^ string_of_expr start_col ^ ":" ^ string_of_expr end_col ^ "]"
   | NoExpr -> ""
 
 
