@@ -39,6 +39,14 @@ type expr =
   | Arr2DSlice of string * expr * expr * expr * expr  (* string: array id, expr: start row index, expr: end row index, expr: start col index, expr: end col index *)
   | NoExpr                                            (* is this necessary? maybe for empty else statements *)
 
+type bind_decl = typ * string
+type bind_init = bind_decl * expr
+
+type bind =
+  BindDecl of bind_decl
+| BindInit of bind_init
+  
+
 type stmt =
   | Block of stmt list
   | Expr of expr
@@ -47,15 +55,14 @@ type stmt =
   | While of expr * stmt
   | Return of expr
   | Break
+  | VDecl of bind
 
-
-type bind = typ * string
 
 (* func_def: ret_typ fname formals locals body *)
 type func_def = {
   rtyp: typ;
   fname: string;
-  formals: bind list; (* parameters *)
+  formals: bind_decl list; (* parameters *)
   body: stmt list;
 }
 
@@ -132,19 +139,6 @@ let string_of_arruop = function
   | NoExpr -> ""
 
 
-let rec string_of_stmt = function
-    Block(stmts) ->
-    "{\n" ^ String.concat "" (List.map string_of_stmt stmts) ^ "}\n"
-  | Expr(expr) -> string_of_expr expr ^ ";\n";
-  | If(e, s1, s2) ->  "if (" ^ string_of_expr e ^ ")\n" ^
-                      string_of_stmt s1 ^ "else\n" ^ string_of_stmt s2
-  | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
-  | For(e1, e2, e3, s) -> "for (" ^ string_of_expr e1 ^ ";" ^ string_of_expr e2 ^ "; " ^ string_of_expr e3 ^ ") " ^ string_of_stmt s
-  | Return(expr) -> "return " ^ string_of_expr expr ^ ";\n"
-  | Break -> "break"
-  (* TODO: add vdecl statement?*)
-
-
 let rec string_of_typ = function
     Int -> "int"
   | Double -> "double"
@@ -160,7 +154,25 @@ let rec string_of_typ = function
   | Void -> "void"
 
   
-let string_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n"
+(* let string_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n" *)
+
+let string_of_vdecl = function
+BindDecl(decl) -> string_of_typ (fst decl) ^ " " ^ (snd decl) ^ ";\n"
+| BindInit(decl, exp) -> string_of_typ (fst decl) ^ " " ^ (snd decl) ^ " = " ^ string_of_expr exp ^ ";\n"
+
+
+let rec string_of_stmt = function
+    Block(stmts) ->
+    "{\n" ^ String.concat "" (List.map string_of_stmt stmts) ^ "}\n"
+  | Expr(expr) -> string_of_expr expr ^ ";\n";
+  | If(e, s1, s2) ->  "if (" ^ string_of_expr e ^ ")\n" ^
+                      string_of_stmt s1 ^ "else\n" ^ string_of_stmt s2
+  | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
+  | For(e1, e2, e3, s) -> "for (" ^ string_of_expr e1 ^ ";" ^ string_of_expr e2 ^ "; " ^ string_of_expr e3 ^ ") " ^ string_of_stmt s
+  | Return(expr) -> "return " ^ string_of_expr expr ^ ";\n"
+  | Break -> "break"
+  | VDecl(vdecl) -> string_of_vdecl vdecl ^ ";\n"
+  (* TODO: add vdecl statement?*)
 
 
 let string_of_fdecl fdecl =
