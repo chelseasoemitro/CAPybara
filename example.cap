@@ -40,5 +40,3 @@ void main()
     int n_rows = length(t); // 3
     int n_cols = length(t[0]); // 2 
 }
-
-

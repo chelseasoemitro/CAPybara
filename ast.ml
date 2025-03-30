@@ -33,8 +33,8 @@ type expr =
   | Arr2DAssign of string * expr * expr * expr        (* string: array id, expr: row index, expr: col index, expr: value *) 
   | Arr1DAccess of string * expr                      (* string: array id, expr list: list of indices *)
   | Arr2DAccess of string * expr * expr               (* string: array id, expr list: list of indices *)
-  | ArrUop of arruop * string
-  | ArrOp of arrop * string * string
+  | ArrUop of arruop * expr                           (* arruop, expr: array *)
+  | ArrOp of arrop * expr * string                    (* arrop, expr: array, string: function ptr id*)
   | Arr1DSlice of string * expr * expr                (* string: array id, expr: start index, expr: end index *)
   | Arr2DSlice of string * expr * expr * expr * expr  (* string: array id, expr: start row index, expr: end row index, expr: start col index, expr: end col index *)
   | NoExpr                                            (* is this necessary? maybe for empty else statements *)
@@ -104,7 +104,7 @@ let string_of_arruop = function
   | BoolLit(true) -> "true"
   | BoolLit(false) -> "false"
   | CharLit(c) -> String.make 1 c
-  | StringLit(s) -> s
+  | StringLit(s) -> "\"" ^ s ^ "\""
   | Arr1DLit(a) -> 
       "[" ^ String.concat ", " (List.map string_of_expr a) ^ "]"
   | Arr2DLit(a) ->
@@ -120,9 +120,9 @@ let string_of_arruop = function
   | Call(f, el) ->
       f ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
   | ArrOp(o, s1, s2) -> 
-      string_of_arrop o ^ "(" ^ s1 ^ ", " ^ s2 ^ ")"
+      string_of_arrop o ^ "(" ^ string_of_expr s1 ^ ", " ^ s2 ^ ")"
   | ArrUop(o, a) -> 
-      string_of_arruop o ^ "(" ^ a ^ ")"
+      string_of_arruop o ^ "(" ^ string_of_expr a ^ ")"
   | Arr1DAssign(a, idx, value) -> 
       a ^ "[" ^ string_of_expr idx ^ "] = " ^ string_of_expr value
   | Arr2DAssign(a, idx1, idx2, value) -> 
@@ -153,8 +153,6 @@ let rec string_of_typ = function
     t_str ^ "[" ^ string_of_int i1 ^ "][" ^ string_of_int i2 ^ "]"
   | Void -> "void"
 
-  
-(* let string_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n" *)
 
 let string_of_vdecl = function
 BindDecl(decl) -> string_of_typ (fst decl) ^ " " ^ (snd decl) ^ ";\n"
@@ -164,16 +162,14 @@ BindDecl(decl) -> string_of_typ (fst decl) ^ " " ^ (snd decl) ^ ";\n"
 let rec string_of_stmt = function
     Block(stmts) ->
     "{\n" ^ String.concat "" (List.map string_of_stmt stmts) ^ "}\n"
-  | Expr(expr) -> string_of_expr expr ^ ";\n";
+  | Expr(expr) -> string_of_expr expr ^ ";\n"
   | If(e, s1, s2) ->  "if (" ^ string_of_expr e ^ ")\n" ^
                       string_of_stmt s1 ^ "else\n" ^ string_of_stmt s2
   | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
   | For(e1, e2, e3, s) -> "for (" ^ string_of_expr e1 ^ ";" ^ string_of_expr e2 ^ "; " ^ string_of_expr e3 ^ ") " ^ string_of_stmt s
   | Return(expr) -> "return " ^ string_of_expr expr ^ ";\n"
   | Break -> "break"
-  | VDecl(vdecl) -> string_of_vdecl vdecl ^ ";\n"
-  (* TODO: add vdecl statement?*)
-
+  | VDecl(vdecl) -> string_of_vdecl vdecl
 
 let string_of_fdecl fdecl =
   string_of_typ fdecl.rtyp ^ " " ^
