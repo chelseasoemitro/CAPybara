@@ -42,11 +42,20 @@ let check (globals, functions) =
 
   (* Collect function declarations for built-in functions: no bodies *)
   let built_in_decls =
-    StringMap.add "print" {
-      rtyp = Int;
-      fname = "print";
-      formals = [(Int, "x")];
-      locals = []; body = [] } StringMap.empty
+    let add_built_in map (name, ty) = StringMap.add name {
+      typ = Void;
+      fname = name;
+      formals = [(typ, "x")];
+      body = []
+    } map
+    in List.fold_left add_built_in StringMap.empty [
+      ("print_int", Int);
+      ("print_double", Double);
+      ("print_char", Char);
+      ("print_bool", Bool);
+      ("print_str", String);
+      ("print_arr", List)
+    ] 
   in
 
   (* Add function name to symbol table *)
@@ -76,8 +85,6 @@ let check (globals, functions) =
   let check_func func =
     (* Make sure no formals or locals are void or duplicates *)
     check_binds "formal" func.formals;
-    check_binds "local" func.locals;
-
     (* Raise an exception if the given rvalue type cannot be assigned to
        the given lvalue type *)
     let check_assign lvaluet rvaluet err =
@@ -95,10 +102,42 @@ let check (globals, functions) =
       with Not_found -> raise (Failure ("undeclared identifier " ^ s))
     in
 
+
     (* Return a semantically-checked expression, i.e., with a type *)
     let rec check_expr = function
-        Literal l -> (Int, SLiteral l)
+        IntLit l -> (Int, SLiteral l)
+      | DoubleLit l -> (Double, SDoubleLit l)
       | BoolLit l -> (Bool, SBoolLit l)
+      | CharLit l -> (Char, SCharLit l)
+      | StringLit l -> (String, SStringLit l)
+      | Arr1DLit l ->   
+        let check_elements = List.map check_expr lst in
+        match check_elements with
+        | [] -> raise (Failure "1D array cannot be empty")
+        | (typ, _) :: tail -> 
+          if match t with Arr1D _ | Arr2D _ -> true | _ -> false then
+            raise (Failure "1D arrays cannot contain nested arrays")
+          else if List.for_all (fun (t', _) -> t' = t) tail then
+            (Arr1D (t, List.length lst), SArr1DLit (List.map snd check_elements))
+          else
+            raise (Failure "All elements in 1D array must be the same type")
+      | Arr2DLit l -> 
+        let num_rows = List.length lst in
+        let row_length = List.length first_row in 
+        if not (List.for_all (fun row -> List.length row = row_length) lst) then
+          raise (Failure "All rows in a 2D array must have the same length")
+        else
+          let check_rows = List.map (List.map check_expr) lst in 
+          match check_rows with
+          | [] -> raise (Failure "Unexpected empty matrix")
+          | (first_typ, _) :: _ ->
+            if match first_typ with Arr1D _ | Arr2D _ -> true | _ -> false then
+              raise (Failure "2D arrays cannot contain nested arrays")
+            else if List.for_all (fun row -> List.for_all (fun (t, _) -> t = first_typ) row) check_rows then
+              (Arr2D (first_typ, num_rows, row_length),
+              SArr2DLit (List.map (List.map snd) check_rows))
+            else
+              raise (Failure "All elements of a 2D array must be of the same type")
       | Id var -> (type_of_identifier var, SId var)
       | Assign(var, e) as ex ->
         let lt = type_of_identifier var
@@ -107,7 +146,14 @@ let check (globals, functions) =
                   string_of_typ rt ^ " in " ^ string_of_expr ex
         in
         (check_assign lt rt err, SAssign(var, (rt, e')))
-
+      | Unop(op, e1) as e ->
+        let (t1, e1') = check_expr e1 in
+        let t = match op with
+            Neg when t1 = Int || t = Double -> t1
+          | Not when t1 = Bool -> Bool
+          | _ -> raise (Failure ("illegal unary operator " ^
+                               string_of_unop op ^ " on " ^ string_of_typ t1 ^
+                               " in " ^ string_of_expr e))
       | Binop(e1, op, e2) as e ->
         let (t1, e1') = check_expr e1
         and (t2, e2') = check_expr e2 in
@@ -119,13 +165,20 @@ let check (globals, functions) =
         if t1 = t2 then
           (* Determine expression type based on operator and operand types *)
           let t = match op with
-              Add | Sub when t1 = Int -> Int
+              Add | Sub | Mult | Div | Mod | Pow when t1 = Int -> Int
+            | Add | Sub | Mult | Div | Mod | Pow when t1 = Double -> Double
+            | Add | Sub | Mult | Div | Mod | Pow when t1 = Arr1D(Int, n) -> Arr1D(Int, n)
+            | Add | Sub | Mult | Div | Mod | Pow when t1 = Arr1D(Double, n) -> Arr1D(Double, n)
+            | Add | Sub | Mult | Div | Mod | Pow when t1 = Arr2D(Int, n) -> Arr2D(Int, n)
+            | Add | Sub | Mult | Div | Mod | Pow when t1 = Arr2D(Double, n) -> Arr2D(Double, n)
             | Equal | Neq -> Bool
-            | Less when t1 = Int -> Bool
+            | Le | Lt | Ge | Gt when (t1 = Int || t1 = Double) -> Bool
+            | Le | Lt | Ge | Gt when (t1 = Arr1D(Int, n) || t1 = Arr1D(Double, n)) -> Arr1D(Bool, n)
             | And | Or when t1 = Bool -> Bool
             | _ -> raise (Failure err)
           in
           (t, SBinop((t1, e1'), op, (t2, e2')))
+        
         else raise (Failure err)
       | Call(fname, args) as call ->
         let fd = find_func fname in
@@ -142,6 +195,12 @@ let check (globals, functions) =
           let args' = List.map2 check_call fd.formals args
           in (fd.rtyp, SCall(fname, args'))
     in
+
+    let check_2d_type = function
+    hd :: _ -> 
+      let typ, _ = check_expr hd in 
+      typ 
+    | _ -> Null in
 
     let check_bool_expr e =
       let (t, e') = check_expr e in
