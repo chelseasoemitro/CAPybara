@@ -132,41 +132,15 @@ vdecl_stmt:
     typ ID              { BindDecl($1, $2)       }
   | typ ID ASSIGN expr  { BindInit(($1, $2), $4) }
 
-// for 1d
 expr_list:
   expr { [$1] }
   | expr COMMA expr_list { $1::$3 }
 
-
-// this works (no conflicts) but it's ugly: a = [1, 2; 3, 4;];
 expr_list_2D:
   expr_list SEMI { [$1] }
   | expr_list SEMI expr_list_2D { $1::$3 }  
 
-
-// [[1,2],[4,5]] syntax
-// expr_list_2D:
-//     L_SQBRACE expr_list R_SQBRACE { [$2] }
-//   | L_SQBRACE expr_list R_SQBRACE COMMA expr_list_2D { [$2] @ $5 }
-
-// matrix_literal:
-//   L_SQBRACE row_list R_SQBRACE { $2 } /* ASK TA */
-
-// // for 2d
-// row_list:
-//   | expr_list { [$1] }
-//   | expr_list SEMI row_list { $1::$3 }
-
-// row: 
-//   expr { [$1] }
-//   | expr COMMA row { $1::$3 }
-
-  // | L_SQBRACE expr_list R_SQBRACE {[$2] } /* Matrix m = [[1,2,3]] */
-  // | row_list COMMA L_SQBRACE expr_list R_SQBRACE {$4::$1 } 
-
-// elems_list:
-//   LITERAL { [$1] }
-//   | elems_list COMMA LITERAL { $3::$1 } /* ASK TA
+// int[3][4] f = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 12, 13]]
 
 expr:
    INT_LIT            { IntLit($1)    }
