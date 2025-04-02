@@ -164,17 +164,39 @@ let check (globals, functions) =
         (* All binary operators require operands of the same type*)
         if t1 = t2 then
           (* Determine expression type based on operator and operand types *)
-          let t = match op with
-              Add | Sub | Mult | Div | Mod | Pow when t1 = Int -> Int
-            | Add | Sub | Mult | Div | Mod | Pow when t1 = Double -> Double
-            | Add | Sub | Mult | Div | Mod | Pow when t1 = Arr1D(Int, n) -> Arr1D(Int, n)
-            | Add | Sub | Mult | Div | Mod | Pow when t1 = Arr1D(Double, n) -> Arr1D(Double, n)
-            | Add | Sub | Mult | Div | Mod | Pow when t1 = Arr2D(Int, n) -> Arr2D(Int, n)
-            | Add | Sub | Mult | Div | Mod | Pow when t1 = Arr2D(Double, n) -> Arr2D(Double, n)
-            | Equal | Neq -> Bool
-            | Le | Lt | Ge | Gt when (t1 = Int || t1 = Double) -> Bool
-            | Le | Lt | Ge | Gt when (t1 = Arr1D(Int, n) || t1 = Arr1D(Double, n)) -> Arr1D(Bool, n)
-            | And | Or when t1 = Bool -> Bool
+          let t =
+            match op, t1 with
+            | (Add | Sub | Mult | Div | Mod | Pow), Int ->
+                Int
+            | (Add | Sub | Mult | Div | Mod | Pow), Double ->
+                Double
+            | (Add | Sub | Mult | Div | Mod | Pow), Arr1D(Int, n) ->
+                Arr1D(Int, n)
+            | (Add | Sub | Mult | Div | Mod | Pow), Arr1D(Double, n) ->
+                Arr1D(Double, n)
+            | (Add | Sub | Mult | Div | Mod | Pow), Arr2D(Int, m, n) ->
+                Arr2D(Int, m, n)
+            | (Add | Sub | Mult | Div | Mod | Pow), Arr2D(Double, m, n) ->
+                Arr2D(Double, m, n)
+            | (Equal | Neq), _ ->
+                Bool
+            | ((Le | Lt | Ge | Gt), (Int | Double)) ->
+                Bool
+            (* Can include these too:
+             | ((Le | Lt | Ge | Gt), Arr1D(Int, n)) ->
+                Arr1D(Bool, n)
+            | ((Le | Lt | Ge | Gt), Arr1D(Double, n)) ->
+                Arr1D(Bool, n)
+            | ((Le | Lt | Ge | Gt), Arr2D(Int, m, n)) ->
+                  Arr2D(Bool, m, n)
+            | ((Le | Lt | Ge | Gt), Arr2D(Double, m, n)) ->
+                  Arr2D(Bool, m, n) *)
+            | (And | Or), Bool ->
+                Bool
+            (* | ((And | Or), Arr1D(Bool, n)) ->
+              Arr1D(Bool, n)
+            | ((And | Or), Arr2D(Bool, m, n)) ->
+              Arr2D(Bool, m, n) *)
             | _ -> raise (Failure err)
           in
           (t, SBinop((t1, e1'), op, (t2, e2')))
