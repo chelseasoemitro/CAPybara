@@ -45,6 +45,8 @@ open Ast
 %type <Ast.program> program
 
 (* lowest precedence *)
+%nonassoc NO_ELSE
+%nonassoc ELSE
 %right ASSIGN 
 %left OR
 %left AND
@@ -70,7 +72,6 @@ decls:
  | vdecl_stmt SEMI decls  { (($1 :: fst $3), snd $3) }  /* vdecls here are global */
  | fdecl decls            { (fst $2, ($1 :: snd $2)) }
 
-
 /* int x */
 vdecl:
   typ ID { ($1, $2) }
@@ -84,9 +85,6 @@ typ:
   | VOID          { Void    }
   | typ L_SQBRACE INT_LIT R_SQBRACE L_SQBRACE INT_LIT R_SQBRACE { Arr2D($1, $3, $6) }
   | typ L_SQBRACE INT_LIT R_SQBRACE           { Arr1D($1, $3)     }
-
-// arr_index:
-//   L_SQBRACE INT_LIT R_SQBRACE { $2 }
 
 /* fdecl */
 fdecl:
@@ -119,8 +117,8 @@ stmt:
   | L_CBRACE stmt_list R_CBRACE                 { Block $2        }
   /* if (condition) { block1} else {block2} */
   /* if (condition) stmt else stmt */
+  | IF L_PAREN expr R_PAREN stmt %prec NO_ELSE          { If($3, $5, Block ([])) }
   | IF L_PAREN expr R_PAREN stmt ELSE stmt              { If($3, $5, $7)      }
-  // | IF L_PAREN expr R_PAREN stmt                        { If($3, $5, NoExpr)  }
   | FOR L_PAREN expr SEMI expr SEMI expr R_PAREN stmt   { For($3, $5, $7, $9) }
   | WHILE L_PAREN expr R_PAREN stmt                     { While ($3, $5)      }
   /* return */
@@ -139,8 +137,6 @@ expr_list:
 expr_list_2D:
   expr_list SEMI { [$1] }
   | expr_list SEMI expr_list_2D { $1::$3 }  
-
-// int[3][4] f = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 12, 13]]
 
 expr:
    INT_LIT            { IntLit($1)    }
