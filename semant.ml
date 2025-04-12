@@ -40,42 +40,40 @@ let check (globals, functions) =
     try StringMap.find s symtab
     with Not_found -> raise (Failure ("undeclared identifier " ^ s))
   in
-  
 
   (* Return a semantically-checked expression, i.e., with a type *)
   let rec check_expr e symtab = 
     match e with
-    |  IntLit l -> (Int, SLiteral l)
+    | IntLit l -> (Int, SLiteral l)
     | DoubleLit l -> (Double, SDoubleLit l)
     | BoolLit l -> (Bool, SBoolLit l)
     | CharLit l -> (Char, SCharLit l)
     | StringLit l -> (String, SStringLit l)
     | Arr1DLit l ->   
-      let check_elements = List.map check_expr lst symtab in
-      match check_elements with
+      let checked_elements = List.map check_expr l symtab in
+      match checked_elements with
       | [] -> raise (Failure "1D array cannot be empty")
       | (typ, _) :: tail -> 
-        if match t with Arr1D _ | Arr2D _ -> true | _ -> false then
+        if match typ with Arr1D _ | Arr2D _ -> true | _ -> false then
           raise (Failure "1D arrays cannot contain nested arrays") 
-        else if List.for_all (fun (t', _) -> t' = t) tail then
-          (Arr1D (t, List.length lst), SArr1DLit (List.map snd check_elements))
+        else if List.for_all (fun (typ', _) -> typ' = typ) tail then
+          (Arr1D (typ, List.length l), SArr1DLit checked_elements)
         else
           raise (Failure "All elements in 1D array must be the same type")
     | Arr2DLit l -> 
-      let num_rows = List.length lst in
-      let row_length = List.length first_row in 
-      if not (List.for_all (fun row -> List.length row = row_length) lst) then
+      let num_rows = List.length l in
+      let row_length = List.length (List.hd l) in 
+      if not (List.for_all (fun row -> List.length row = row_length) l) then
         raise (Failure "All rows in a 2D array must have the same length")
       else
-        let check_rows = List.map (List.map check_expr) lst symtab in 
-        match check_rows with
-        | [] -> raise (Failure "Unexpected empty matrix")
-        | (first_typ, _) :: _ ->
+        let checked_rows = List.map (List.map check_expr) l symtab in 
+        match checked_rows with
+        | [] -> raise (Failure "2D array cannot be empty")
+        | ( (first_typ, _) :: _ ) :: _ ->
           if match first_typ with Arr1D _ | Arr2D _ -> true | _ -> false then
             raise (Failure "2D arrays cannot contain nested arrays")
-          else if List.for_all (fun row -> List.for_all (fun (t, _) -> t = first_typ) row) check_rows then
-            (Arr2D (first_typ, num_rows, row_length),
-            SArr2DLit (List.map (List.map snd) check_rows))
+          else if List.for_all (fun row -> List.for_all (fun (t, _) -> t = first_typ) row) checked_rows then
+            (Arr2D (first_typ, num_rows, row_length), SArr2DLit checked_rows)
           else
             raise (Failure "All elements of a 2D array must be of the same type")
     | Id var -> (type_of_identifier var symtab, SId var)
@@ -101,47 +99,93 @@ let check (globals, functions) =
                 string_of_typ t1 ^ " " ^ string_of_op op ^ " " ^
                 string_of_typ t2 ^ " in " ^ string_of_expr e
       in
-      (* All binary operators require operands of the same type*)
-      if t1 = t2 then
-        (* Determine expression type based on operator and operand types *)
-        let t =
-          match op, t1 with
-          | (Add | Sub | Mult | Div | Mod | Pow), Int ->
-              Int
-          | (Add | Sub | Mult | Div | Mod | Pow), Double ->
-              Double
-          | (Add | Sub | Mult | Div | Mod | Pow), Arr1D(Int, n) ->
-              Arr1D(Int, n)
-          | (Add | Sub | Mult | Div | Mod | Pow), Arr1D(Double, n) ->
-              Arr1D(Double, n)
-          | (Add | Sub | Mult | Div | Mod | Pow), Arr2D(Int, m, n) ->
-              Arr2D(Int, m, n)
-          | (Add | Sub | Mult | Div | Mod | Pow), Arr2D(Double, m, n) ->
-              Arr2D(Double, m, n)
-          | (Equal | Neq), _ ->
-              Bool
-          | ((Le | Lt | Ge | Gt), (Int | Double)) ->
-              Bool
-          (* Can include these too:
-            | ((Le | Lt | Ge | Gt), Arr1D(Int, n)) ->
-              Arr1D(Bool, n)
-          | ((Le | Lt | Ge | Gt), Arr1D(Double, n)) ->
-              Arr1D(Bool, n)
-          | ((Le | Lt | Ge | Gt), Arr2D(Int, m, n)) ->
-                Arr2D(Bool, m, n)
-          | ((Le | Lt | Ge | Gt), Arr2D(Double, m, n)) ->
+      (* All binary operators except Mmult require operands of the same type*)
+      match op with
+        Mmult ->
+          (match (t1, t2) with
+            | Arr2D (t1_elem, r1, c1), Arr2D (t2_elem, r2, c2) ->
+              if t1_elem <> t2_elem then
+                raise (Failure ("matrix elements must be same type for matrix multiplication: " ^ 
+                                string_of_typ t1_elem ^ " vs " ^ string_of_typ t2_elem))
+              else if (t1_elem <> Int && t1_elem <> Double) then
+                raise (Failure ("matrix elements must be Int or Double for matrix multiplication, got: " ^
+                                string_of_typ t1_elem))
+              else if c1 <> r2 then
+                raise (Failure ("matrix dimensions mismatch for matrix multiplication: " ^
+                                Printf.sprintf "(%d x %d) * (%d x %d)" r1 c1 r2 c2))
+              else
+                (Arr2D (t1_elem, r1, c2), SBinop((t1, e1'), op, (t2, e2')))
+            | _ -> raise (Failure ("Matrix multiplication only supported for 2D arrays (matrices), got: " ^
+                            string_of_typ t1 ^ " and " ^ string_of_typ t2)))
+        | _ ->
+          if t1 = t2 then
+            (* Determine expression type based on operator and operand types *)
+            let t =
+              match op, t1 with
+              | (Add | Sub | Mult | Div | Mod | Pow), Int ->
+                  Int
+              | (Add | Sub | Mult | Div | Mod | Pow), Double ->
+                  Double
+              | (Add | Sub | Mult | Div ), Arr1D(Int, n) ->
+                  Arr1D(Int, n)
+              | (Add | Sub | Mult | Div ), Arr1D(Double, n) ->
+                  Arr1D(Double, n)
+              | (Add | Sub | Mult | Div ), Arr2D(Int, m, n) ->
+                  Arr2D(Int, m, n)
+              | (Add | Sub | Mult | Div ), Arr2D(Double, m, n) ->
+                  Arr2D(Double, m, n)
+              | (Equal | Neq), _ ->
+                  Bool
+              | ((Le | Lt | Ge | Gt), (Int | Double)) ->
+                  Bool
+              (* Can include these too:
+                | ((Le | Lt | Ge | Gt), Arr1D(Int, n)) -> 
+                  Arr1D(Bool, n)
+              | ((Le | Lt | Ge | Gt), Arr1D(Double, n)) ->
+                  Arr1D(Bool, n)
+              | ((Le | Lt | Ge | Gt), Arr2D(Int, m, n)) ->
+                    Arr2D(Bool, m, n)
+              | ((Le | Lt | Ge | Gt), Arr2D(Double, m, n)) ->
+                    Arr2D(Bool, m, n) *)
+              | (And | Or), Bool ->
+                  Bool
+              (* | ((And | Or), Arr1D(Bool, n)) ->
+                Arr1D(Bool, n)
+              | ((And | Or), Arr2D(Bool, m, n)) ->
                 Arr2D(Bool, m, n) *)
-          | (And | Or), Bool ->
-              Bool
-          (* | ((And | Or), Arr1D(Bool, n)) ->
-            Arr1D(Bool, n)
-          | ((And | Or), Arr2D(Bool, m, n)) ->
-            Arr2D(Bool, m, n) *)
-          | _ -> raise (Failure err)
-        in
-        (t, SBinop((t1, e1'), op, (t2, e2')))
-      
-      else raise (Failure err)
+              | _ -> raise (Failure err)
+            in
+            (t, SBinop((t1, e1'), op, (t2, e2')))
+          else if ((match (t1, t2) with
+            | (Int, Arr1D(Int, _))
+            | (Arr1D(Int, _), Int)
+            | (Int, Arr2D(Int, _, _))
+            | (Arr2D(Int, _, _), Int)
+            | (Double, Arr1D(Double, _))
+            | (Arr1D(Double, _), Double)
+            | (Double, Arr2D(Double, _, _))
+            | (Arr2D(Double, _, _), Double) -> true
+            | _ -> false)
+          &&
+          (match op with
+            | Add | Sub | Mult -> true
+            | _ -> false))
+          then
+            let t =
+              match t1, t2 with
+              | (Int, (Arr1D(Int, n))) | ((Arr1D(Int, _n)), Int) ->
+                  Arr1D(Int, n)
+              | (Int, (Arr2D(Int, m, n))) | ((Arr2D(Int, m, n)), Int) ->
+                  Arr2D(Int, m, n)
+              | (Double, (Arr1D(Double, n))) | ((Arr1D(Double, n)), Double) ->
+                  Arr1D(Double, n)
+              | (Double, (Arr2D(Double, m, n))) | ((Arr2D(Double, m, n)), Double) ->
+                  Arr2D(Double, m, n)
+              | _ -> raise (Failure err)
+              in
+              (t, SBinop((t1, e1'), op, (t2, e2')))
+          else
+            raise (Failure err)
     | Call(fname, args) as call ->
       let fd = find_func fname in
       let param_length = List.length fd.formals in
@@ -156,8 +200,176 @@ let check (globals, functions) =
         in
         let args' = List.map2 check_call fd.formals args
         in (fd.rtyp, SCall(fname, args'))
+    | Arr1DAssign(id, i, v) ->  (* id[i] = v *)
+      let arr_typ =
+        try StringMap.find id symtab
+        with Not_found -> raise (Failure ("undeclared array identifier: " ^ id))
+      in
+      (match arr_typ with
+        | Arr1D (elem_typ, _) ->
+          let (index_type, index_s) = check_expr i symtab in
+          let (value_type, value_s) = check_expr v symtab in
+          if index_type <> Int then
+            raise (Failure ("array index must be of type int, got " ^
+                          string_of_typ index_type ^ " in " ^ string_of_expr index_expr));
+          let _ = check_assign elem_typ value_type
+            ("array assignment type mismatch: expected " ^ string_of_typ elem_typ ^
+                ", got " ^ string_of_typ value_type ^ " in " ^ string_of_expr value_expr)
+          in (elem_typ, SArr1DAssign (id, (index_type, index_s), (value_type, value_s)))
+        | _ -> raise (Failure (id ^ " is not a 1D array")))
+    | Arr2DAssign(id, row_expr, col_expr, value_expr) -> (* id[row][col] = v *)
+      let arr_typ =
+        try StringMap.find id symtab
+        with Not_found -> raise (Failure ("undeclared array identifier: " ^ id))
+      in
+      (match arr_typ with
+        | Arr2D (elem_typ, _, _) ->
+          let (row_type, row_s) = check_expr row_expr symtab in
+          let (col_type, col_s) = check_expr col_expr symtab in
+          let (value_type, value_s) = check_expr value_expr symtab in
+
+          if row_type <> Int || col_type <> Int then
+            raise (Failure (
+              "array indices must be of type int, got: [" ^
+              string_of_typ row_type ^ ", " ^ string_of_typ col_type ^ "] " ^
+              "in " ^ string_of_expr row_expr ^ " and " ^ string_of_expr col_expr
+            ));
+
+          let _ = check_assign elem_typ value_type
+            ("matrix assignment type mismatch: expected " ^ string_of_typ elem_typ ^
+            ", got " ^ string_of_typ value_type ^ " in " ^ string_of_expr value_expr)
+          in (elem_typ, SArr2DAssign (id,
+                                      (row_type, row_s),
+                                      (col_type, col_s),
+                                      (value_type, value_s)))
+        | _ -> raise (Failure (id ^ " is not a 2D array")))
+
+    | Arr1DAccess(id, i) -> (* id[i] *)
+      let arr_typ =
+        try StringMap.find id symtab
+        with Not_found -> raise (Failure ("undeclared array identifier: " ^ id))
+      in
+      (match arr_typ with
+        | Arr1D (elem_typ, _) ->
+          let (index_t, index_s) = check_expr index_expr symtab in
+          if index_t <> Int then
+            raise (Failure ("array index must be of type int, got " ^
+                            string_of_typ index_t ^ " in " ^ string_of_expr index_expr));
+          (elem_typ, SArr1DAccess (id, (index_t, index_s)))
+        | _ -> raise (Failure (id ^ " is not a 1D array")))
+
+    | Arr2DAccess(id, row_expr, col_expr) -> (* id[row_expr][col_expr] *)
+       let arr_typ =
+        try StringMap.find id symtab
+        with Not_found -> raise (Failure ("undeclared array identifier: " ^ id))
+      in
+      (match arr_typ with
+        | Arr2D (elem_typ, _, _) ->
+          let (row_type, row_s) = check_expr row_expr symtab in
+          let (col_type, col_s) = check_expr col_expr symtab in
+          if row_t <> Int || col_t <> Int then
+            raise (Failure (
+              "array indices must be of type int, got: [" ^
+              string_of_typ row_type ^ ", " ^ string_of_typ col_type ^ "] " ^
+              "in " ^ string_of_expr row_expr ^ " and " ^ string_of_expr col_expr
+            ));
+          (elem_typ, SArr2DAccess (id, (row_t, row_s), (col_t, col_s)))
+        | _ -> raise (Failure (id ^ " is not a 1D array")))
+    | ArrUop(op, arr) -> 
+        let (arr_typ, arr_s) = check_expr arr_expr symtab in
+        (match op, arr_typ with
+        | Length, Arr1D (_, _) | Length, Arr2D (_, _, _) ->
+            (Int, SArrUop (op, (arr_typ, arr_s)))
+        | Transpose, Arr2D (elem_typ, rows, cols) ->
+            (Arr2D (elem_typ, cols, rows), SArrUop (op, (arr_typ, arr_s)))
+        | Length, _ ->
+            raise (Failure ("'length' applied to non-array type: " ^ string_of_typ arr_typ))
+        | Transpose, _ ->
+            raise (Failure ("'transpose' applied to non-2D array type: " ^ string_of_typ arr_typ)))
+    | ArrOp(op, arr, func) ->
+      let (arr_typ, arr_s) = check_expr arr_expr symtab in
+      let fd = find_func func_name in
+        match op, arr_typ with
+        | Map, Arr1D (elem_typ, n) ->
+          (match fd.formals, fd.rtyp with
+          | [arg_typ], ret_typ when arg_typ = elem_typ && ret_typ = elem_typ ->
+              (Arr1D (elem_typ, n), SArrOp (op, (arr_typ, arr_s), func_name))
+          | _ ->
+              raise (Failure (
+                "map function must take one argument of type " ^ string_of_typ elem_typ ^
+                " and return the same type in map(" ^ string_of_typ arr_typ ^ ", " ^ func_name ^ ")"
+              )))
+        | Map, Arr2D (elem_typ, m, n) ->
+          (match fd.formals, fd.rtyp with
+          | [arg_typ], ret_typ when arg_typ = elem_typ && ret_typ = elem_typ ->
+              (Arr2D (elem_typ, m, n), SArrOp (op, (arr_typ, arr_s), func_name))
+          | _ ->
+              raise (Failure (
+                "map function must take one argument of type " ^ string_of_typ elem_typ ^
+                " and return the same type in map(" ^ string_of_typ arr_typ ^ ", " ^ func_name ^ ")"
+              )))
+        | Reduce, Arr1D (elem_typ, n) ->
+          (match fd.formals, fd.rtyp with
+          | [t1; t2], ret_typ when t1 = elem_typ && t2 = elem_typ && ret_typ = elem_typ ->
+              (elem_typ, SArrOp (op, (arr_typ, arr_s), func_name))
+          | _ ->
+              raise (Failure (
+                "reduce function must take two arguments of type " ^ string_of_typ elem_typ ^
+                " and return " ^ string_of_typ elem_typ ^ " in reduce(" ^ string_of_typ arr_typ ^ ", " ^ func_name ^ ")"
+              )))
+        | Reduce, Arr2D (elem_typ, m, n) ->
+          (match fd.formals, fd.rtyp with
+          | [t1; t2], ret_typ when t1 = elem_typ && t2 = elem_typ && ret_typ = elem_typ ->
+              (Arr1D (elem_typ, m), SArrOp (op, (arr_typ, arr_s), func_name))
+          | _ ->
+              raise (Failure (
+                "reduce function must take two arguments of type " ^ string_of_typ elem_typ ^
+                " and return " ^ string_of_typ elem_typ ^ " in reduce(" ^ string_of_typ arr_typ ^ ", " ^ func_name ^ ")"
+              )))
+        | Map, _ | Reduce, _ ->
+            raise (Failure (
+              string_of_arrop op ^ " expects an array operand, got " ^ string_of_typ arr_typ ^
+              " in " ^ string_of_expr e))
+    | Arr1DSlice(id, s, e) -> (* id[s:e] *)
+      let arr_typ =
+        try StringMap.find id symtab
+        with Not_found -> raise (Failure ("undeclared array identifier: " ^ id))
+      in
+      (match arr_typ with
+        | Arr1D (elem_typ, orig_len) ->
+          if s < 0 || e <= 0 || s >= e || e > orig_len then
+            raise (Failure (
+              "invalid slice bounds [" ^ string_of_int s ^ ":" ^ string_of_int e ^
+              "] for array '" ^ id ^ "' of length " ^ string_of_int orig_len
+            ))
+          else
+            let slice_len = e - s in
+            (Arr1D (elem_typ, slice_len), SArr1DSlice (id, s, e))
+        | _ ->
+          raise (Failure (id ^ " is not a 1D array and cannot be sliced")))
+    | Arr2DSlice(id, s1, e1, s2, e2) -> (* id[s1:e1, s2:e2] *)
+      let arr_typ =
+        try StringMap.find id symtab
+        with Not_found -> raise (Failure ("undeclared array identifier: " ^ id))
+      in
+      (match arr_typ with
+        | Arr2D (elem_typ, orig_row_len, orig_col_len) ->
+          if s1 < 0 || e1 <= 0 || s1 >= e1 || e1 > orig_row_len || 
+            s2 < 0 || e2 <= 0 || s2 >= e2 || e2 > orig_col_len then
+            raise (Failure (
+              "invalid slice bounds [" ^ string_of_int s1 ^ ":" ^ string_of_int e1 ^
+              "][" ^  string_of_int s2 ^ ":" ^ string_of_int e1 ^ "for array '" ^ id ^ 
+              "' of shape " ^ string_of_int orig_row_len ^ "x" ^ string_of_int orig_col_len
+            ))
+          else
+            let new_rows = e1 - s1 in
+            let new_cols = e2 - s2 in
+            (Arr2D (elem_typ, new_rows, new_cols), SArr2DSlice (id, s1, e1, s2, e2))
+        | _ ->
+          raise (Failure (id ^ " is not a 1D array and cannot be sliced")))
+    | NoExpr -> (Void, SNoExpr)
   in
-  
+
   (* Extract binds from global vars. We turn them to sbinds at the end. *)
   let rec extract_global_binds = function
     [] -> []
@@ -237,13 +449,15 @@ let check (globals, functions) =
       | Block sl :: sl'  -> check_stmt_list (sl @ sl') (* Flatten blocks *)
       | s :: sl -> check_stmt s :: check_stmt_list sl
     (* Return a semantically-checked statement i.e. containing sexprs *)
-    and check_stmt =function
+    and check_stmt = function
       (* A block is correct if each statement is correct and nothing
          follows any Return statement.  Nested blocks are flattened. *)
         Block sl -> SBlock (check_stmt_list sl)
       | Expr e -> SExpr (check_expr e symbols)
       | If(e, st1, st2) ->
         SIf(check_bool_expr e, check_stmt st1, check_stmt st2)
+      | For(e1, e2, e3, st) ->
+        SFor(check_expr e1, check_expr e2, check_bool_expr e3, check_stmt st)
       | While(e, st) ->
         SWhile(check_bool_expr e, check_stmt st)
       | Return e ->
@@ -252,6 +466,7 @@ let check (globals, functions) =
         else raise (
             Failure ("return gives " ^ string_of_typ t ^ " expected " ^
                      string_of_typ func.rtyp ^ " in " ^ string_of_expr e))
+      | Break -> SBreak (* LEFT OFF HERE NOT DONE*)
     in (* body of check_func *)
     { srtyp = func.rtyp;
       sfname = func.fname;
@@ -294,7 +509,6 @@ let check (globals, functions) =
 
 (*
 TODOs:
-- update check_expr function
 - update check_stmt function
-  - remember to update symbol table for VDecl statements
+- remember to update symbol table for VDecl statements
 *)
