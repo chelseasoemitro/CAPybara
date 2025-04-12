@@ -174,11 +174,11 @@ expr:
   | ID L_SQBRACE expr R_SQBRACE                                                 { Arr1DAccess($1, $3)           }
   | ID L_SQBRACE expr R_SQBRACE L_SQBRACE expr R_SQBRACE                        { Arr2DAccess($1, $3, $6)     }
   | LENGTH L_PAREN expr R_PAREN                                                 { ArrUop(Length, $3)            }
-  | TRANSPOSE L_PAREN expr R_PAREN                                                { ArrUop(Transpose, $3)         }
-  | MAP L_PAREN expr COMMA ID R_PAREN                                         { ArrOp(Map, $3, $5)            }
-  | REDUCE L_PAREN expr COMMA ID R_PAREN                                      { ArrOp(Reduce, $3, $5)         }
-  | ID L_SQBRACE expr COLON expr R_SQBRACE                                      { Arr1DSlice($1, $3, $5)        }
-  | ID L_SQBRACE expr COLON expr COMMA expr COLON expr R_SQBRACE  { Arr2DSlice($1, $3, $5, $7, $9) }
+  | TRANSPOSE L_PAREN expr R_PAREN                                              { ArrUop(Transpose, $3)         }
+  | MAP L_PAREN expr COMMA ID R_PAREN                                           { ArrOp(Map, $3, $5)            }
+  | REDUCE L_PAREN expr COMMA ID R_PAREN                                        { ArrOp(Reduce, $3, $5)         }
+  | ID L_SQBRACE INT_LIT COLON INT_LIT R_SQBRACE                                { Arr1DSlice($1, $3, $5)        }
+  | ID L_SQBRACE INT_LIT COLON INT_LIT COMMA INT_LIT COLON INT_LIT R_SQBRACE    { Arr2DSlice($1, $3, $5, $7, $9) }
 
 /* args_opt*/
 args_opt:

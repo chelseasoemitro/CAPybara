@@ -26,12 +26,12 @@ type expr =
   | Call of string * expr list
   | Arr1DAssign of string * expr * expr               (* string: array id, expr: index, expr: value*)
   | Arr2DAssign of string * expr * expr * expr        (* string: array id, expr: row index, expr: col index, expr: value *) 
-  | Arr1DAccess of string * expr                      (* string: array id, expr list: list of indices *)
-  | Arr2DAccess of string * expr * expr               (* string: array id, expr list: list of indices *)
+  | Arr1DAccess of string * expr                      (* string: array id, expr: index *)
+  | Arr2DAccess of string * expr * expr               (* string: array id, expr: row index, expr: col index *)
   | ArrUop of arruop * expr                           (* arruop, expr: array *)
   | ArrOp of arrop * expr * string                    (* arrop, expr: array, string: function ptr id*)
-  | Arr1DSlice of string * expr * expr                (* string: array id, expr: start index, expr: end index *)
-  | Arr2DSlice of string * expr * expr * expr * expr  (* string: array id, expr: start row index, expr: end row index, expr: start col index, expr: end col index *)
+  | Arr1DSlice of string * int * int                  (* string: array id, int: start index, int: end index *)
+  | Arr2DSlice of string * int * int * int * int      (* string: array id, int: start row index, int: end row index, int: start col index, int: end col index *)
   | NoExpr                                            (* is this necessary? maybe for empty else statements *)
 
 type bind_decl = typ * string
@@ -127,10 +127,10 @@ let string_of_arruop = function
   | Arr2DAccess(a, idx1, idx2) -> 
       a ^ "[" ^ string_of_expr idx1 ^ "][" ^ string_of_expr idx2 ^ "]"
   | Arr1DSlice(a, start_idx, end_idx) ->
-      a ^ "[" ^ string_of_expr start_idx ^ ":" ^ string_of_expr end_idx ^ "]"
+      a ^ "[" ^ string_of_int start_idx ^ ":" ^ string_of_int end_idx ^ "]"
   | Arr2DSlice(a, start_row, end_row, start_col, end_col) ->
-    a ^ "[" ^ string_of_expr start_row ^ ":" ^ string_of_expr end_row ^ ", " 
-            ^ string_of_expr start_col ^ ":" ^ string_of_expr end_col ^ "]"
+    a ^ "[" ^ string_of_int start_row ^ ":" ^ string_of_int end_row ^ ", " 
+            ^ string_of_int start_col ^ ":" ^ string_of_int end_col ^ "]"
   | NoExpr -> ""
 
 

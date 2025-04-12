@@ -16,12 +16,12 @@ and sx =
   | SCall of string * sexpr list
   | SArr1DAssign of string * sexpr * sexpr               (* string: array id, expr: index, expr: value*)
   | SArr2DAssign of string * sexpr * sexpr * sexpr        (* string: array id, expr: row index, expr: col index, expr: value *) 
-  | SArr1DAccess of string * sexpr                      (* string: array id, expr list: list of indices *)
-  | SArr2DAccess of string * sexpr * sexpr               (* string: array id, expr list: list of indices *)
+  | SArr1DAccess of string * sexpr                      (* string: array id, expr: index *)
+  | SArr2DAccess of string * sexpr * sexpr               (* string: array id, expr: row index, expr: col index *)
   | SArrUop of arruop * sexpr                           (* arruop, expr: array *)
   | SArrOp of arrop * sexpr * string                    (* arrop, expr: array, string: function ptr id*)
-  | SArr1DSlice of string * sexpr * sexpr                (* string: array id, expr: start index, expr: end index *)
-  | SArr2DSlice of string * sexpr * sexpr * sexpr * sexpr  (* string: array id, expr: start row index, expr: end row index, expr: start col index, expr: end col index *)
+  | SArr1DSlice of string * int * int                (* string: array id, expr: start index, expr: end index *)
+  | SArr2DSlice of string * int * int * int * int  (* string: array id, expr: start row index, expr: end row index, expr: start col index, expr: end col index *)
   | SNoExpr                                            (* is this necessary? maybe for empty else statements *)
 
   
