@@ -76,15 +76,18 @@ decls:
 vdecl:
   typ ID { ($1, $2) }
 
-typ:
+base_typ:
     INT           { Int     }
   | DOUBLE        { Double  }
   | BOOL          { Bool    }
   | CHAR          { Char    }
   | STRING        { String  }
+
+typ:
+    base_typ      { $1 }
   | VOID          { Void    }
-  | typ L_SQBRACE INT_LIT R_SQBRACE L_SQBRACE INT_LIT R_SQBRACE { Arr2D($1, $3, $6) }
-  | typ L_SQBRACE INT_LIT R_SQBRACE           { Arr1D($1, $3)     }
+  | base_typ L_SQBRACE INT_LIT R_SQBRACE L_SQBRACE INT_LIT R_SQBRACE { Arr2D($1, $3, $6) }
+  | base_typ L_SQBRACE INT_LIT R_SQBRACE           { Arr1D($1, $3)     }
 
 /* fdecl */
 fdecl:
@@ -119,7 +122,7 @@ stmt:
   /* if (condition) stmt else stmt */
   | IF L_PAREN expr R_PAREN stmt %prec NO_ELSE          { If($3, $5, Block ([])) }
   | IF L_PAREN expr R_PAREN stmt ELSE stmt              { If($3, $5, $7)      }
-  | FOR L_PAREN expr SEMI expr SEMI expr R_PAREN stmt   { For($3, $5, $7, $9) }
+  | FOR L_PAREN stmt expr SEMI expr R_PAREN stmt   { For($3, $4, $6, $8) }
   | WHILE L_PAREN expr R_PAREN stmt                     { While ($3, $5)      }
   /* return */
   | RETURN expr SEMI                        { Return $2 }

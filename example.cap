@@ -1,14 +1,24 @@
+int func1(int a, int b) {
+    return a + b;
+}
+
 void main()
 {
     int a = 9;
     int b = 18;
     while (a != b) {
         if (b < a) {
-            a = a - b;
+            a = func1(a, b);
+            break;
         } else {
             b = b - a; 
         }
     }
+
+    for (int i = 0; i < 5; i = i + 1) {
+        print_str("hello in a loop!");
+    }
+
     string s = "hello \t world \n"; 
     char c = 'a';
 
@@ -35,6 +45,11 @@ void main()
 
     // Transpose 
     int[3][2] t = transpose(m); // [1,4; 2,5; 3,6]
+
+    // int[2][3] p = transpose(m); // will not work
+    // int[2][2] x = m @ o; // will not work
+    int[2] l = c[0:2]; // works
+    int[2] u = l * 2; // works
 
     // Length
     int n_rows = length(t); // 3

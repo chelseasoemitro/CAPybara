@@ -14,15 +14,15 @@ and sx =
   | SUop of uop * sexpr
   | SAssign of string * sexpr
   | SCall of string * sexpr list
-  | SArr1DAssign of string * sexpr * sexpr               (* string: array id, expr: index, expr: value*)
-  | SArr2DAssign of string * sexpr * sexpr * sexpr        (* string: array id, expr: row index, expr: col index, expr: value *) 
-  | SArr1DAccess of string * sexpr                      (* string: array id, expr: index *)
-  | SArr2DAccess of string * sexpr * sexpr               (* string: array id, expr: row index, expr: col index *)
-  | SArrUop of arruop * sexpr                           (* arruop, expr: array *)
-  | SArrOp of arrop * sexpr * string                    (* arrop, expr: array, string: function ptr id*)
+  | SArr1DAssign of string * sexpr * sexpr           (* string: array id, expr: index, expr: value*)
+  | SArr2DAssign of string * sexpr * sexpr * sexpr   (* string: array id, expr: row index, expr: col index, expr: value *) 
+  | SArr1DAccess of string * sexpr                   (* string: array id, expr: index *)
+  | SArr2DAccess of string * sexpr * sexpr           (* string: array id, expr: row index, expr: col index *)
+  | SArrUop of arruop * sexpr                        (* arruop, expr: array *)
+  | SArrOp of arrop * sexpr * string                 (* arrop, expr: array, string: function ptr id*)
   | SArr1DSlice of string * int * int                (* string: array id, expr: start index, expr: end index *)
-  | SArr2DSlice of string * int * int * int * int  (* string: array id, expr: start row index, expr: end row index, expr: start col index, expr: end col index *)
-  | SNoExpr                                            (* is this necessary? maybe for empty else statements *)
+  | SArr2DSlice of string * int * int * int * int    (* string: array id, expr: start row index, expr: end row index, expr: start col index, expr: end col index *)
+  | SNoExpr                                          (* for empty else statements *)
 
   
 type sbind_decl = typ * string
@@ -36,7 +36,7 @@ type sstmt =
   | SBlock of sstmt list
   | SExpr of sexpr
   | SIf of sexpr * sstmt * sstmt
-  | SFor of sexpr * sexpr * sexpr * sstmt
+  | SFor of sstmt * sexpr * sexpr * sstmt
   | SWhile of sexpr * sstmt
   | SReturn of sexpr
   | SBreak
@@ -95,11 +95,11 @@ let string_of_sarruop = function
   | SArr1DLit(a) -> 
       "[" ^ String.concat ", " (List.map string_of_sexpr a) ^ "]"
   | SArr2DLit(a) ->
-      "[" ^ String.concat ", " (List.map (fun row -> 
+      "[" ^ String.concat " " (List.map (fun row -> 
           String.concat ", " (List.map string_of_sexpr row) ^ ";"
       ) a) ^ "]"
   | SId(s) -> s
-  | SBinop((ty,e1), o, e2) ->
+  | SBinop(e1, o, e2) ->
       string_of_sexpr e1 ^ " " ^ string_of_sop o ^ " " ^ string_of_sexpr e2
   | SUop(o, e) ->
       string_of_suop o ^ " " ^ string_of_sexpr e
@@ -119,10 +119,10 @@ let string_of_sarruop = function
   | SArr2DAccess(a, idx1, idx2) -> 
       a ^ "[" ^ string_of_sexpr idx1 ^ "][" ^ string_of_sexpr idx2 ^ "]"
   | SArr1DSlice(a, start_idx, end_idx) ->
-      a ^ "[" ^ string_of_sexpr start_idx ^ ":" ^ string_of_sexpr end_idx ^ "]"
+      a ^ "[" ^ string_of_int start_idx ^ ":" ^ string_of_int end_idx ^ "]"
   | SArr2DSlice(a, start_row, end_row, start_col, end_col) ->
-      a ^ "[" ^ string_of_sexpr start_row ^ ":" ^ string_of_sexpr end_row ^ ", " 
-              ^ string_of_sexpr start_col ^ ":" ^ string_of_sexpr end_col ^ "]"
+      a ^ "[" ^ string_of_int start_row ^ ":" ^ string_of_int end_row ^ ", " 
+              ^ string_of_int start_col ^ ":" ^ string_of_int end_col ^ "]"
   | SNoExpr -> ""
   ) ^ ")"
 
@@ -139,9 +139,9 @@ let rec string_of_sstmt = function
   | SIf(e, s1, s2) ->  "if (" ^ string_of_sexpr e ^ ")\n" ^
                       string_of_sstmt s1 ^ "else\n" ^ string_of_sstmt s2
   | SWhile(e, s) -> "while (" ^ string_of_sexpr e ^ ") " ^ string_of_sstmt s
-  | SFor(e1, e2, e3, s) -> "for (" ^ string_of_sexpr e1 ^ ";" ^ string_of_sexpr e2 ^ "; " ^ string_of_sexpr e3 ^ ") " ^ string_of_sstmt s
+  | SFor(s1, e1, e2, s2) -> "for (" ^ string_of_sstmt s1 ^ string_of_sexpr e1 ^ "; " ^ string_of_sexpr e2 ^ ") " ^ string_of_sstmt s2
   | SReturn(sexpr) -> "return " ^ string_of_sexpr sexpr ^ ";\n"
-  | SBreak -> "break"
+  | SBreak -> "break;\n"
   | SVDecl(svdecl) -> string_of_svdecl svdecl
 
 let string_of_sfdecl sfdecl =
@@ -154,6 +154,6 @@ let string_of_sfdecl sfdecl =
 
 
   let string_of_sprogram (vars, funcs) =
-    "\n\nParsed program: \n\n" ^
+    "\n\nSemantically-checked program: \n\n" ^
     String.concat "" (List.map string_of_svdecl vars) ^ "\n" ^
     String.concat "\n" (List.map string_of_sfdecl funcs)

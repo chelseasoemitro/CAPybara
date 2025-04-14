@@ -32,7 +32,7 @@ type expr =
   | ArrOp of arrop * expr * string                    (* arrop, expr: array, string: function ptr id*)
   | Arr1DSlice of string * int * int                  (* string: array id, int: start index, int: end index *)
   | Arr2DSlice of string * int * int * int * int      (* string: array id, int: start row index, int: end row index, int: start col index, int: end col index *)
-  | NoExpr                                            (* is this necessary? maybe for empty else statements *)
+  | NoExpr                                            (* for empty else statements *)
 
 type bind_decl = typ * string
 type bind_init = bind_decl * expr
@@ -46,7 +46,7 @@ type stmt =
   | Block of stmt list
   | Expr of expr
   | If of expr * stmt * stmt
-  | For of expr * expr * expr * stmt
+  | For of stmt * expr * expr * stmt
   | While of expr * stmt
   | Return of expr
   | Break
@@ -161,9 +161,9 @@ let rec string_of_stmt = function
   | If(e, s1, s2) ->  "if (" ^ string_of_expr e ^ ")\n" ^
                       string_of_stmt s1 ^ "else\n" ^ string_of_stmt s2
   | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
-  | For(e1, e2, e3, s) -> "for (" ^ string_of_expr e1 ^ ";" ^ string_of_expr e2 ^ "; " ^ string_of_expr e3 ^ ") " ^ string_of_stmt s
+  | For(s1, e1, e2, s2) -> "for (" ^ string_of_stmt s1 ^ string_of_expr e1 ^ "; " ^ string_of_expr e2 ^ ") " ^ string_of_stmt s2
   | Return(expr) -> "return " ^ string_of_expr expr ^ ";\n"
-  | Break -> "break"
+  | Break -> "break;\n"
   | VDecl(vdecl) -> string_of_vdecl vdecl
 
 let string_of_fdecl fdecl =

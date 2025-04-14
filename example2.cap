@@ -1,0 +1,24 @@
+int add(int x, int y) {
+    return x + y;
+}
+
+int add_ten(int x) {
+    return x + 10;
+}
+
+void main() {
+    int[3] a = [1, 2, 3];
+    int[2][3] b = [1, 2, 3; 4, 5, 6;];
+    
+    // Map on 1D array
+    int[3] a_plus_ten = map(a, add_ten); // [11, 12, 13]
+
+    // Map on 2D array
+    int[2][3] b_plus_ten = map(b, add_ten); // [11, 12, 13; 14, 15, 16]
+
+    // Reduce on 1D array
+    int a_sum = reduce(a, add); // 6
+
+    // Reduce on 2D array
+    int[2] b_row_sum = reduce(b, add); // Reduces each row -> [6; 15]
+}
