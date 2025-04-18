@@ -98,7 +98,7 @@ let string_of_arruop = function
   | DoubleLit(l) -> string_of_float l
   | BoolLit(true) -> "true"
   | BoolLit(false) -> "false"
-  | CharLit(c) -> String.make 1 c
+  | CharLit(c) -> "\'" ^ String.make 1 c ^ "\'"
   | StringLit(s) -> "\"" ^ s ^ "\""
   | Arr1DLit(a) -> 
       "[" ^ String.concat ", " (List.map string_of_expr a) ^ "]"

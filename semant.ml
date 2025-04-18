@@ -120,12 +120,12 @@ let check (globals, functions) =
         else if List.for_all (fun (typ', _) -> typ' = typ) tail then
           (Arr1D (typ, List.length l), SArr1DLit checked_elements)
         else
-          raise (Failure "All elements in 1D array must be the same type"))
+          raise (Failure ("All elements in 1D array must be the same type: " ^ string_of_expr e)))
     | Arr2DLit l -> 
       let num_rows = List.length l in
       let row_length = List.length (List.hd l) in 
       if not (List.for_all (fun row -> List.length row = row_length) l) then
-        raise (Failure "All rows in a 2D array must have the same length")
+        raise (Failure ("All rows in a 2D array must have the same length: " ^ string_of_expr e))
       else
         let checked_rows =
           List.map (fun row -> List.map (fun x -> check_expr x symtab) row) l in 
@@ -137,7 +137,7 @@ let check (globals, functions) =
             else if List.for_all (fun row -> List.for_all (fun (t, _) -> t = first_typ) row) checked_rows then
               (Arr2D (first_typ, num_rows, row_length), SArr2DLit checked_rows)
             else
-              raise (Failure "All elements of a 2D array must be of the same type")
+              raise (Failure ("All elements of a 2D array must be of the same type" ^ string_of_expr e))
           | _ -> raise (Failure "poop"))
     | Id var -> (type_of_identifier var symtab, SId var)
     | Assign(var, e) as ex ->
@@ -440,7 +440,7 @@ let check (globals, functions) =
     | NoExpr -> (Void, SNoExpr)
   in
 
-  
+
   let check_func func =
     (* Make sure no formals or locals are void or duplicates *)
     check_binds "formal" func.formals;
@@ -516,12 +516,30 @@ let check (globals, functions) =
   in
 
 
-(* check the exprs on RHS of BindInits *)
+(* check the exprs on RHS of global BindInits are only literals *)
   let check_expr_global e symtab =
     let (t, e') = check_expr e symtab in
-      (match t with
-        | (Int | Double | Bool | Char | 
-            String | Arr1D _ | Arr2D _) -> (t, e')
+    let is_scalar_lit = function
+      | SIntLit _ | SDoubleLit _ | SBoolLit _ | SCharLit _ | SStringLit _ -> true
+      | _ -> false
+    in
+    let scalar_type = function
+      | Int | Double | Bool | Char | String -> true
+      | _ -> false
+    in
+      (match (t, e')  with
+        | (Int   , SIntLit    _)
+        | (Double, SDoubleLit _)
+        | (Bool  , SBoolLit   _)
+        | (Char  , SCharLit   _)
+        | (String, SStringLit _) -> (t, e')
+        | (Arr1D (elem_t, _), SArr1DLit els) when scalar_type elem_t ->
+          if List.for_all (fun (_,e') -> is_scalar_lit e') els
+            then (t, e') else raise (Failure ("global initializer for arrays must be literals: " ^ string_of_expr e))
+        | (Arr2D (elem_t, _, _), SArr2DLit rows) when scalar_type elem_t ->
+          let row_all_lits row = List.for_all (fun (_,e') -> is_scalar_lit e') row in
+          if List.for_all row_all_lits rows
+          then (t, e') else raise (Failure ("global initializer for arrays must be literals: " ^ string_of_expr e))
         | _ -> raise (Failure ("global initializer not supported " ^ string_of_expr e)))
   in
 
