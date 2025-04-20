@@ -4,7 +4,7 @@
 
 let digit = ['0'-'9']
 let letter = ['a'-'z' 'A'-'Z']
-let ascii_char = [' '-'~']
+let ascii_char = [' '-'!'] | ['#'-'['] | [']'-'~']  (* exclude backslash and double quotes *)
 let escape_char = '\\' ['\\' 'n' 't' 'r' ''' '"' ]
 
 rule token = parse
