@@ -11,7 +11,7 @@ open Ast
 %token SEMI COMMA
 
 (* Arithmetic operators *)
-%token PLUS MINUS MULT DIV MOD POW
+%token PLUS MINUS MULT DIV MOD
 
 (* Assignment *)
 %token ASSIGN
@@ -58,7 +58,6 @@ open Ast
 %left COLON 
 %left LENGTH TRANSPOSE MAP REDUCE
 %right NOT NEG
-%right POW 
 %nonassoc L_PAREN R_PAREN L_SQBRACE R_SQBRACE
 (* highest precedence *)
 
@@ -155,7 +154,6 @@ expr:
   | expr MULT   expr { Binop($1, Mult,  $3)   }
   | expr DIV    expr { Binop ($1, Div, $3)    }
   | expr MOD    expr { Binop($1, Mod, $3)     }
-  | expr POW    expr { Binop($1, Pow, $3)     }
   | expr EQ     expr { Binop($1, Equal, $3)   }
   | expr NEQ    expr { Binop($1, Neq, $3)     }
   | expr LT     expr { Binop($1, Lt,  $3)     }

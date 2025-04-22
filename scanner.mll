@@ -32,7 +32,6 @@ rule token = parse
 | '*'      { MULT }
 | '/'      { DIV }
 | '%'      { MOD }
-| "**"     { POW }
 
 (* Assignment *)
 | '='      { ASSIGN }

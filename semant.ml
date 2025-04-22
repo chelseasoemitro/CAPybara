@@ -200,9 +200,9 @@ let check (globals, functions) =
             (* Determine expression type based on operator and operand types *)
             let t =
               (match op, t1 with
-              | (Add | Sub | Mult | Div | Mod | Pow), Int ->
+              | (Add | Sub | Mult | Div | Mod), Int ->
                   Int
-              | (Add | Sub | Mult | Div | Mod | Pow), Double ->
+              | (Add | Sub | Mult | Div | Mod), Double ->
                   Double
               | (Add | Sub | Mult | Div ), Arr1D(Int, n) ->
                   Arr1D(Int, n)
@@ -245,9 +245,7 @@ let check (globals, functions) =
             | (Arr2D(Double, _, _), Double) -> true
             | _ -> false)
           &&
-          (match op with
-            | Add | Sub | Mult -> true
-            | _ -> false))
+          op = Mult)
           then
             let t =
               (match t1, t2 with
