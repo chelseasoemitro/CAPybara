@@ -173,42 +173,129 @@ let translate (globals, functions) =
 
     (* Return the value for a variable or formal argument.
        Check local names first, then global names *)
-    let lookup n = try StringMap.find n local_vars
+    let lookup n local_vars = try StringMap.find n local_vars
       with Not_found -> StringMap.find n global_vars
     in
 
     (* done up to here *)
 
     (* Construct code for an expression; return its value *)
-    let rec build_expr builder ((_, e) : sexpr) = match e with
-        SLiteral i  -> L.const_int i32_t i
+    let rec build_expr builder local_vars ((ty, e) : sexpr) = match e with
+        SIntLit i  -> L.const_int i32_t i
+      | SDoubleLit d -> L.const_float double_t d
       | SBoolLit b  -> L.const_int i1_t (if b then 1 else 0)
-      | SId s       -> L.build_load (lookup s) s builder
-      | SAssign (s, e) -> let e' = build_expr builder e in
-        ignore(L.build_store e' (lookup s) builder); e'
-      | SBinop (e1, op, e2) ->
-        let e1' = build_expr builder e1
-        and e2' = build_expr builder e2 in
+      | SCharLit c -> L.const_int i8_t (Char.code c)
+      | SStringLit s -> L.build_global_stringptr s ".str" builder
+      | SArr1DLit elems ->
+         (* get the types *)
+        let (elem_typ, _) :: _ = List.hd elems in
+        let llvm_elem_ty = ltype_of_typ elem_typ in
+        (* create the array *)
+        let array_const = Array.map (map_to_const_llvm) (Array.of_list elems) in  (* contruct all of the literals *) 
+        L.const_array llvm_elem_ty array_const (* make the array using L.const_array *)
+      | SArr2DLit elem_list ->
+        (* get the types *)
+        let ((elem_typ, _) :: _) = List.hd elems_list in
+        let m  = List.length elems_list
+        and n  = List.length (List.hd elems_list) in
+        let llvm_elem_ty = ltype_of_typ elem_typ in
+
+        let build_row row =
+          let consts = Array.map map_to_const_llvm (Array.of_list row) in   (* constructed llvalue array *)
+          L.const_array llvm_elem_ty consts          (* array of n x T *)
+        in
+
+        (* build array of constant rows *)
+        let row_consts : L.llvalue array =
+          Array.map build_row (Array.of_list elems_list)    (* m x [n x T] *)
+        in
+        let row_ty = L.array_type llvm_elem_ty n       (* [n x T] type *)
+        L.const_array row_ty row_consts (* return the pointer to an array of [m x [n x T]] made of row_consts values *)
+      | SId s       -> L.build_load (lookup s local_vars) s builder
+      | SAssign (s, e) -> let e' = build_expr builder local_vars e in
+        ignore(L.build_store e' (lookup s local_vars) builder); e'
+      | SBinop ((A.Double, _) as e1, op, (A.Double, _) as e2) ->
+        let e1' = build_expr builder local_vars e1
+        and e2' = build_expr builder local_vars e2 in
         (match op with
-           A.Add     -> L.build_add
-         | A.Sub     -> L.build_sub
-         | A.And     -> L.build_and
-         | A.Or      -> L.build_or
-         | A.Equal   -> L.build_icmp L.Icmp.Eq
-         | A.Neq     -> L.build_icmp L.Icmp.Ne
-         | A.Less    -> L.build_icmp L.Icmp.Slt
+          | A.Add     -> L.build_fadd
+          | A.Sub     -> L.build_fsub
+          | A.Mult    -> L.build_fmul
+          | A.Div     -> L.build_fdiv
+          | A.Mod     -> L.build_frem
+          | A.Equal   -> L.build_fcmp L.Fcmp.Oeq
+          | A.Neq     -> L.build_fcmp L.Fcmp.One
+          | A.Lt    -> L.build_fcmp L.Fcmp.Olt
+          | A.Gt    -> L.build_fcmp L.Fcmp.Ogt
+          | A.Le   -> L.build_fcmp L.Fcmp.Ole
+          | A.Ge   -> L.build_fcmp L.Fcmp.Oge
+          | _      -> raise (Failure("error: not a viable double-double operation"))
+          ) e1' e2' "tmp" builder
+      (* mismatching types for matrix * scalar multiplication *)
+      | SBinop((A.Arr1D(_, _), _) as e1, op, e2) ->
+        let e1' = build_expr builder local_vars e1
+        and e2' = build_expr builder local_vars e2 in
+        match (e1, op, e2) with 
+          | ((Arr1D(A.Int, _), _), A.Mult, A.Int) -> (* 1d array * int function *)
+          | ((Arr1D(A.Double, _), _), A.Mult, A.Double) -> (* 1d array * double function *)
+      | SBinop(e1, op, (A.Arr1D(_, _), _) as e2) ->
+        let e1' = build_expr builder local_vars e1
+        and e2' = build_expr builder local_vars e2 in
+        match (e1, op, e2) with 
+          | (A.Int, A.Mult, (Arr1D(A.Int, _), _)) -> (* 1d array * int function *)
+          | (A.Double, A.Mult, (Arr1D(A.Double, _), _)) -> (* 1d array * double function *)
+      | SBinop((A.Arr2D(_, _), _) as e1, op, e2) ->
+        let e1' = build_expr builder local_vars e1
+        and e2' = build_expr builder local_vars e2 in
+        match (e1, op, e2) with 
+          | ((Arr2D(A.Int, _), _), A.Mult, A.Int) -> (* 2d array * int function *)
+          | ((Arr2D(A.Double, _), _), A.Mult, A.Double) -> (* 2d array * double function *)
+      | SBinop(e1, op, (A.Arr2D(_, _), _) as e2) ->
+        let e1' = build_expr builder local_vars e1
+        and e2' = build_expr builder local_vars e2 in
+        match (e1, op, e2) with 
+          | (A.Int, A.Mult, (Arr2D(A.Int, _), _)) -> (* 2d array * int function *)
+          | (A.Double, A.Mult, (Arr2D(A.Double, _), _)) -> (* 2d array * double function *)
+
+      (* General binop case: ints, bools, chars, strings *)
+      | SBinop (e1, op, e2) ->        
+        let e1' = build_expr builder local_vars e1
+        and e2' = build_expr builder local_vars e2 in
+        (match op with
+          | A.Add     -> L.build_add
+          | A.Sub     -> L.build_sub
+          | A.Mult    -> L.build_mul
+          | A.Div     -> L.build_sdiv
+          | A.Mod     -> L.build_srem 
+          | A.Equal   -> L.build_icmp L.Icmp.Eq
+          | A.Neq     -> L.build_icmp L.Icmp.Ne
+          | A.Lt    -> L.build_icmp L.Icmp.Slt
+          | A.Gt    -> L.build_icmp L.Icmp.Sgt
+          | A.Le   -> L.build_icmp L.Icmp.Sle
+          | A.Ge   -> L.build_icmp L.Icmp.Sge
+          | _      -> raise (Failure("error: not a viable int-int operation"))
         ) e1' e2' "tmp" builder
+      | SUop() ->
+      | SArr1DAssign() ->
+      | SArr2DAssign() ->
+      | SArr1DAccess() ->
+      | SArr2DAccess() ->
+      | SArrOp() ->
+      | SArrUop() ->
+      | SArr1DSlice() ->
+      | SArr2DSlice() ->
+      | SNoExpr() ->  
       | SCall ("print_int", [e]) ->
-        L.build_call printf_func [| int_format_str ; (build_expr builder e) |]
+        L.build_call printf_func [| int_format_str ; (build_expr builder local_vars e) |]
           "printf" builder
       | SCall ("print_double", [e]) ->
-        L.build_call printf_func [| double_format_str ; (build_expr builder e) |]
+        L.build_call printf_func [| double_format_str ; (build_expr builder local_vars e) |]
           "printf" builder
       | SCall ("print_char", [e]) ->
-        L.build_call printf_func [| char_format_str ; (build_expr builder e) |]
+        L.build_call printf_func [| char_format_str ; (build_expr builder local_vars e) |]
           "printf" builder
       | SCall ("print_bool", [e]) ->
-        let bool_val = build_expr builder e in (* i1 result of e *)
+        let bool_val = build_expr builder local_vars e in (* i1 result of e *)
         let chosen =
           L.build_select bool_val                     (* i1 condition        *)
                         true_str                     (* i8* if true         *)
@@ -217,11 +304,11 @@ let translate (globals, functions) =
         in
         L.build_call printf_func [| bool_fmt ; chosen |] "printf" builder
       | SCall ("print_str", [e]) ->
-        L.build_call printf_func [| str_format_str ; (build_expr builder e) |]
+        L.build_call printf_func [| str_format_str ; (build_expr builder local_vars e) |]
           "printf" builder
       | SCall (f, args) ->
         let (fdef, fdecl) = StringMap.find f function_decls in
-        let llargs = List.rev (List.map (build_expr builder) (List.rev args)) in
+        let llargs = List.rev (List.map (build_expr builder local_vars) (List.rev args)) in (* TODO this call may be wrong now *)
         let result = f ^ "_result" in
         L.build_call fdef (Array.of_list llargs) result builder
     in
@@ -243,13 +330,13 @@ let translate (globals, functions) =
           let build_stmts (builder', local_vars') = 
             build_stmt (builder', local_vars', we_bb) in 
           (fst (List.fold_left build_stmts (builder, local_vars) sl), local_vars)
-      | SExpr e -> ignore(build_expr builder e); (builder, local_vars)
+      | SExpr e -> ignore(build_expr builder local_vars e); (builder, local_vars)
       | SReturn e -> ignore(match fdec.srtyp with
            A.Void -> L.build_ret_void builder
-          | _ -> L.build_ret (build_expr builder e) builder);
+          | _ -> L.build_ret (build_expr builder local_vars e) builder);
           (builder, local_vars)
       | SIf (predicate, then_stmt, else_stmt) ->
-        let bool_val = build_expr builder predicate in
+        let bool_val = build_expr builder local_vars predicate in
 
         let then_bb = L.append_block context "then" the_function in
         ignore (build_stmt ((L.builder_at_end context then_bb), local_vars, we_bb) then_stmt);
@@ -273,7 +360,7 @@ let translate (globals, functions) =
         let build_br_while = L.build_br while_bb in (* partial function *)
         ignore (build_br_while builder);
         let while_builder = L.builder_at_end context while_bb in
-        let bool_val = build_expr while_builder predicate in
+        let bool_val = build_expr while_builder local_vars predicate in
 
         let body_bb = L.append_block context "while_body" the_function in
         let end_bb = L.append_block context "while_end" the_function in
@@ -294,7 +381,7 @@ let translate (globals, functions) =
           let local_var = L.build_alloca (ltype_of_typ t) n builder
           in StringMap.add n local_var local_vars (* return the updated local_vars *)
         | SBindInit((ty, n), e) ->
-          let e' = build_expr builder e (* update later to take local_vars map *)
+          let e' = build_expr builder local_vars e (* update later to take local_vars map *)
           in L.set_value_name n e';
           let local_var = L.build_alloca (ltype_of_typ t) n builder
           in ignore(L.build_store e' local_var builder);
@@ -314,5 +401,8 @@ let translate (globals, functions) =
   the_module
 
   (* TODO:
-    - build_expr
+    - build_expr:
+      - finish binop implementation of 1d/2d array * int/double (need to write LLVM functions)
+      - uop
+      - all array operations
   *)
