@@ -177,13 +177,546 @@ let translate (globals, functions) =
       with Not_found -> StringMap.find n global_vars
     in
 
-    (* done up to here *)
+    let build_arr_1d_int_mult builder local_vars arr (_, arr_se) int_se =
+      (* get ptrs and values *)
+      let arr_ptr = build_expr builder local_vars arr_se in
+      let int_val = build_expr builder local_vars int_se in
+      
+      (* allocate result [len x i32] *)
+      let llvm_arr_ty = ltype_of_typ (A.Arr1D (A.Int, len)) in
+      let res_ptr = L.build_alloca llvm_ar_ty "arr_mul_res" builder in
 
-    (* Construct code for an expression; return its value *)
+      (* loop *)
+      for i = 0 to len - 1 do
+        let idx = L.const_int i32_t i in
+        (* load element *)
+        let src_gep =
+          L.build_in_bounds_gep arr_ptr
+            [| L.const_int i32_t 0; idx |]
+            "src_gep" builder
+        in
+        let v = L.build_load src_gep "src_val" builder in
+
+        (* multiply *)
+        let prod = L.build_mul v int_val "elt_mul" builder in
+
+        (* store *)
+        let dst_gep =
+          L.build_in_bounds_gep res_ptr
+            [| L.const_int i32_t 0; idx |]
+            "dst_gep" builder
+        in
+        ignore (L.build_store prod dst_gep builder)
+      done;
+
+      (* return the ptr to the new array *)
+      res_ptr
+    in
+
+    let build_arr_2d_int_mult builder local_vars arr (_, arr_se) int_se =
+      (* get ptrs and values *)
+      let arr_ptr = build_expr builder local_vars arr_se in
+      let int_val = build_expr builder local_vars int_se in
+
+      (* allocate result [len x i32] *)
+      let llvm_arr_ty = ltype_of_typ (A.Arr2D (A.Int, m, n)) in
+      let res_ptr = L.build_alloca llvm_ar_ty "arr2d_mul_res" builder in
+
+      (* loop *)
+      for i = 0 to m - 1 do
+        let i_idx = L.const_int i32_t i in
+        (* pointer to row i of source *)
+        let src_row_ptr =
+          L.build_in_bounds_gep arr_ptr
+            [| L.const_int i32_t 0; i_idx |]
+            "src_row" builder
+        in
+        (* pointer to row i of dest *)
+        let dst_row_ptr =
+          L.build_in_bounds_gep res_ptr
+            [| L.const_int i32_t 0; i_idx |]
+            "dst_row" builder
+        in
+    
+        for j = 0 to n - 1 do
+          let j_idx = L.const_int i32_t j in
+    
+          (* load src[i][j] *)
+          let src_elem_gep =
+            L.build_in_bounds_gep src_row_ptr
+              [| L.const_int i32_t 0; j_idx |]
+              "src_gep" builder
+          in
+          let v = L.build_load src_elem_gep "src_val" builder in
+    
+          (* mul v * scalar *)
+          let prod =
+            L.build_mul v int_val "elt_mul" builder
+          in
+    
+          (* store into dest[i][j] *)
+          let dst_elem_gep =
+            L.build_in_bounds_gep dst_row_ptr
+              [| L.const_int i32_t 0; j_idx |]
+              "dst_gep" builder
+          in
+          ignore (L.build_store prod dst_elem_gep builder)
+        done
+      done;
+    
+      (* return the ptr to the new array *)
+      res_ptr
+    in
+
+    let build_arr_1d_double_mult builder local_vars arr (_, arr_se) double_se =
+      (* get ptrs and values *)
+      let arr_ptr = build_expr builder local_vars arr_se in
+      let double_val = build_expr builder local_vars int_se in
+
+      (* allocate result [len x i32] *)
+      let llvm_arr_ty = ltype_of_typ (A.Arr1D (A.Double, len)) in
+      let res_ptr = L.build_alloca llvm_ar_ty "arr_mul_res" builder in
+
+      (* loop *)
+      for i = 0 to len - 1 do
+        let idx = L.const_int i32_t i in
+        (* load element *)
+        let src_gep =
+          L.build_in_bounds_gep arr_ptr
+            [| L.const_int i32_t 0; idx |]
+            "src_gep" builder
+        in
+        let v = L.build_load src_gep "src_val" builder in
+
+        (* multiply *)
+        let prod = L.build_fmul v double_val "elt_mul" builder in
+
+        (* store *)
+        let dst_gep =
+          L.build_in_bounds_gep res_ptr
+            [| L.const_int i32_t 0; idx |]
+            "dst_gep" builder
+        in
+        ignore (L.build_store prod dst_gep builder)
+      done;
+
+      (* return the ptr to the new array *)
+      res_ptr
+    in
+
+    let build_arr_2d_double_mult builder local_vars (_, arr_se) double_se =
+       (* get ptrs and values *)
+       let arr_ptr = build_expr builder local_vars arr_se in
+       let double_val = build_expr builder local_vars int_se in
+ 
+       (* allocate result [m x n x i32] *)
+       let llvm_arr_ty = ltype_of_typ (A.Arr2D (A.Double, m, n)) in
+       let res_ptr = L.build_alloca llvm_ar_ty "arr2d_mul_res" builder in
+ 
+       (* loop *)
+       for i = 0 to m - 1 do
+         let i_idx = L.const_int i32_t i in
+         (* pointer to row i of source *)
+         let src_row_ptr =
+           L.build_in_bounds_gep arr_ptr
+             [| L.const_int i32_t 0; i_idx |]
+             "src_row" builder
+         in
+         (* pointer to row i of dest *)
+         let dst_row_ptr =
+           L.build_in_bounds_gep res_ptr
+             [| L.const_int i32_t 0; i_idx |]
+             "dst_row" builder
+         in
+     
+         for j = 0 to n - 1 do
+           let j_idx = L.const_int i32_t j in
+     
+           (* load src[i][j] *)
+           let src_elem_gep =
+             L.build_in_bounds_gep src_row_ptr
+               [| L.const_int i32_t 0; j_idx |]
+               "src_gep" builder
+           in
+           let v = L.build_load src_elem_gep "src_val" builder in
+     
+           (* mul v * scalar *)
+           let prod =
+             L.build_fmul v double_val "elt_mul" builder
+           in
+     
+           (* store into dest[i][j] *)
+           let dst_elem_gep =
+             L.build_in_bounds_gep dst_row_ptr
+               [| L.const_int i32_t 0; j_idx |]
+               "dst_gep" builder
+           in
+           ignore (L.build_store prod dst_elem_gep builder)
+         done
+       done;
+     
+       (* return the ptr to the new array *)
+       res_ptr
+    in
+
+    let build_arr2d_mmult builder local_vars ((elem_ty1, m, n1), arr1_se) ((elem_ty2, n2, p), arr2_se) =
+      (* get ptrs to arrays *)
+      let arr1_ptr = build_expr builder local_vars arr1_se in
+      let arr2_ptr = build_expr builder local_vars arr2_se in
+
+      (* allocate result [m x p x i32] *)
+      let llvm_arr_ty = ltype_of_typ (A.Arr2D (elem_ty1, m, p)) in
+      let res_ptr = L.build_alloca llvm_ar_ty "arr2d_mmult_res" builder in
+
+      (* a zero value for the accumulator *)
+      let zero_acc = match elem_ty1 with
+        | A.Int    -> L.const_int  i32_t 0
+        | A.Double -> L.const_float double_t 0.0
+        | _        -> failwith "matrix-mul on non-numeric type"
+      in
+
+      (* triple nested loop to do the matrix mult *)
+      for i = 0 to m - 1 do
+        let i_idx = L.const_int i32_t i in
+    
+        for j = 0 to p - 1 do
+          let j_idx = L.const_int i32_t j in
+    
+          (* accumulator register in OCaml *)
+          let acc = ref zero_acc in
+    
+          (* sum over k *)
+          for k = 0 to n1 - 1 do
+            let k_idx = L.const_int i32_t k in
+    
+            (* load a = arr1[i][k] *)
+            let a_ptr =
+              L.build_in_bounds_gep arr1_ptr
+                [| L.const_int i32_t 0; i_idx; k_idx |]
+                "mm_a_gep" builder
+            in
+            let a_val = L.build_load a_ptr "mm_a" builder in
+    
+            (* load b = arr2[k][j] *)
+            let b_ptr =
+              L.build_in_bounds_gep arr2_ptr
+                [| L.const_int i32_t 0; k_idx; j_idx |]
+                "mm_b_gep" builder
+            in
+            let b_val = L.build_load b_ptr "mm_b" builder in
+    
+            (* prod = a * b *)
+            let prod = match elem_ty1 with
+              | A.Int    -> L.build_mul  a_val b_val "mm_mul" builder
+              | A.Double -> L.build_fmul a_val b_val "mm_fmul" builder
+              | _        -> assert false
+            in
+    
+            (* acc = acc + prod *)
+            let sum = match elem_ty1 with
+              | A.Int    -> L.build_add  !acc prod "mm_add"  builder
+              | A.Double -> L.build_fadd !acc prod "mm_fadd" builder
+              | _        -> assert false
+            in
+    
+            acc := sum
+          done;
+          
+          (* store the final acc into res[i][j] *)
+          let dst_ptr =
+            L.build_in_bounds_gep res_ptr
+              [| L.const_int i32_t 0; i_idx; j_idx |]
+              "mm_res_gep" builder
+          in
+          ignore (L.build_store !acc dst_ptr builder)
+        done
+      done;
+
+      (* return the ptr to the new array *)
+      res_ptr
+    in
+
+    let build_arr_2d_transpose builder local_vars ((elem_ty, m, n), arr_se) as arr_expr =
+      (* get the array ptr we're transposing *)
+      let arr_ptr = build_expr builder local_vars arr_se in
+
+      (* get array types *)
+      let llvm_in_ty  = ltype_of_typ (elem_ty, m, n) in
+      let llvm_out_ty = ltype_of_typ (A.Arr2D (elem_ty, n, m)) in
+
+      (* allocate new transposed array on stack*)
+      let res_ptr = L.build_alloca llvm_out_ty "arr2d_transpose" builder in
+
+      (* loop to transpose elements *)
+      for i = 0 to m - 1 do
+        for j = 0 to n - 1 do
+          (* a) load element (i,j) from input *)
+          let src_gep =
+            L.build_in_bounds_gep arr_ptr
+              [| L.const_int i32_t 0
+               ; L.const_int i32_t i
+               ; L.const_int i32_t j
+              |]
+              "src_gep" builder
+          in
+          let v = L.build_load src_gep "src" builder in
+    
+          (* b) store it into (j,i) of result *)
+          let dst_gep =
+            L.build_in_bounds_gep res_ptr
+              [| L.const_int i32_t 0
+               ; L.const_int i32_t j
+               ; L.const_int i32_t i
+              |]
+              "dst_gep" builder
+          in
+          ignore (L.build_store v dst_gep builder)
+        done
+      done;
+    
+      (* return ptr to transposed array *)
+      res_ptr
+    in
+
+
+    let build_map_arr_1d builder local_vars ((elem_ty, n) as t, arr_se) as arr_expr func_name =
+      (* get ptrs and values *)
+      let arr_ptr = build_expr builder local_vars arr_se in
+      let double_val = build_expr builder local_vars int_se in
+      let (fn_val, _) = StringMap.find func_name function_decls in
+
+      (* allocate result [len x i32] *)
+      let llvm_arr_ty = ltype_of_typ t in
+      let res_ptr = L.build_alloca llvm_ar_ty (func_name ^ "_map2d") builder in
+
+      (* loop *)
+      for i = 0 to len - 1 do
+        let idx = L.const_int i32_t i in
+        (* load element *)
+        let src_gep =
+          L.build_in_bounds_gep arr_ptr
+            [| L.const_int i32_t 0; idx |]
+            "src_gep" builder
+        in
+        let v = L.build_load src_gep "src_val" builder in
+
+        (* apply the map and get a value *)
+        let mapped  = L.build_call fn_val [| v |] (func_name ^ "_call") builder in
+
+        (* store *)
+        let dst_gep =
+          L.build_in_bounds_gep res_ptr
+            [| L.const_int i32_t 0; idx |]
+            "dst_gep" builder
+        in
+        ignore (L.build_store mapped dst_gep builder)
+      done;
+
+      (* return the ptr to the new array *)
+      res_ptr
+    in
+
+
+    let build_map_arr_2d builder local_vars ((elem_ty, m, n) as t, arr_se) as arr_expr func_name  =
+      (* get ptrs and values *)
+      let arr_ptr = build_expr builder local_vars arr_se in
+      let double_val = build_expr builder local_vars int_se in
+      let (fn_val, _) = StringMap.find func_name function_decls in
+
+      (* allocate result [len x i32] *)
+      let llvm_arr_ty = ltype_of_typ t in
+      let res_ptr = L.build_alloca llvm_ar_ty (func_name ^ "_map2d") builder in
+
+       (* loop *)
+       for i = 0 to m - 1 do
+        let i_idx = L.const_int i32_t i in
+        (* pointer to row i of source *)
+        let src_row_ptr =
+          L.build_in_bounds_gep arr_ptr
+            [| L.const_int i32_t 0; i_idx |]
+            "src_row" builder
+        in
+        (* pointer to row i of dest *)
+        let dst_row_ptr =
+          L.build_in_bounds_gep res_ptr
+            [| L.const_int i32_t 0; i_idx |]
+            "dst_row" builder
+        in
+    
+        for j = 0 to n - 1 do
+          let j_idx = L.const_int i32_t j in
+    
+          (* load src[i][j] *)
+          let src_elem_gep =
+            L.build_in_bounds_gep src_row_ptr
+              [| L.const_int i32_t 0; j_idx |]
+              "src_gep" builder
+          in
+          let v = L.build_load src_elem_gep "src_val" builder in
+    
+          (* apply the map and get a value *)
+          let mapped  = L.build_call fn_val [| v |] (func_name ^ "_call") builder in
+    
+          (* store into dest[i][j] *)
+          let dst_elem_gep =
+            L.build_in_bounds_gep dst_row_ptr
+              [| L.const_int i32_t 0; j_idx |]
+              "dst_gep" builder
+          in
+          ignore (L.build_store mapped dst_elem_gep builder)
+        done
+      done;
+
+      res_ptr
+
+    in
+
+    let build_reduce_arr_1d builder local_vars ((elem_ty, n) as t, arr_se) as arr_expr func_name =
+      (* get ptrs and values *)
+      let arr_ptr = build_expr builder local_vars arr_se in
+      let (fn_val, _) = StringMap.find func_name function_decls in
+
+      (* allocate accumulator with initial value of arr_ptr[0] *)
+      let zero = L.const_int i32_t 0 in
+      let gep0 = L.build_in_bounds_gep arr_ptr [| zero; zero |] "red1d_0_gep" builder in
+      let acc = ref (L.build_load gep0 "red1d_acc0" builder) in
+    
+      (* loop from 1 to length, reducing each element *)
+      for i = 1 to len - 1 do
+        let idx = L.const_int i32_t i in
+        (* load element *)
+        let gep =
+          L.build_in_bounds_gep arr_ptr
+            [| L.const_int i32_t 0; idx |]
+            "red1d_i_gep" builder
+        in
+        let v = L.build_load src_gep "red1d_vi" builder in
+        let new_acc =
+          L.build_call fn_val [| !acc; v |] (func_name ^ "_call") builder
+        in
+        acc := new_acc
+      done;
+      (* return the final accumulated value *)
+      !acc
+    in
+
+    let build_reduce_arr_2d builder local_vars ((elem_ty, m, n) as t, arr_se) as arr_expr func_name =
+      (* get ptrs and values *)
+      let arr_ptr = build_expr builder local_vars arr_se in
+      let (fn_val, _) = StringMap.find func_name function_decls in
+
+      (* allocate result [len x i32] *)
+      let llvm_arr_ty = ltype_of_typ t in
+      let res_ptr = L.build_alloca llvm_ar_ty (func_name ^ "_reduce2d") builder in
+      let zero = L.const_int i32_t 0 in
+
+      (* loop over all rows, for each row loop from 1 to length, reducing the elems in each row *)
+      for i = 0 to m - 1 do
+        (* start-of-row accumulator = arr[i][0] *)
+        let i_idx = L.const_int i32_t i in
+        let gep00 = L.build_in_bounds_gep arr_ptr [| zero; i_idx; zero |] "red2d_src00" builder in
+        let acc_row0 = L.build_load gep00 "red2d_acc00" builder in
+        (* accumulate row arr[i] into value dst[i] *)
+        let dst00 = L.build_in_bounds_gep res_ptr [| zero; i_idx; zero |] "red2d_dst00" builder in
+        ignore (L.build_store acc_row0 dst00 builder); (* store initial value of arr[i][0] into dst[i]*)
+        let acc = ref acc_row0 in
+
+        (* j = 1..n-1: acc = f(acc, arr[i][j]); out[i][j] = acc *)
+        for j = 1 to n - 1 do
+          let j_idx = L.const_int i32_t j in
+          let gepij =
+            L.build_in_bounds_gep arr_ptr [| zero; i_idx; j_idx |] "red2d_srcij" builder
+          in
+          let v = L.build_load gepij "red2d_vij" builder in
+          let new_acc =
+            L.build_call fn_val [| !acc; v |] (func_name ^ "_call") builder
+          in
+          acc := new_acc;
+          let dstij =
+            L.build_in_bounds_gep res_ptr [| zero; i_idx; j_idx |] "scan2d_dstij" builder
+          in
+          ignore (L.build_store !acc dstij builder)
+        done
+      done;
+    
+      (* return ptr to the new array of reduced rows *)
+      res_ptr
+    in
+    
+    let build_arr_1d_slice builder local_vars ((elem_ty, n), var) as id start_index end_index =
+      let arr_ptr = build_expr builder local_vars id in
+
+      (* calculate new length *)
+      let new_len = end_index - start_index in
+      
+      (* allocate result [new_len x type_size] *)
+      let llvm_arr_ty = ltype_of_typ Arr1D(elem_ty, new_len) in
+      let res_ptr = L.build_alloca llvm_ar_ty ("_slice1d") builder in
+      let zero   = L.const_int i32_t 0 in
+      
+      (* loop to copy elements *)
+      for i = 0 to new_len - 1 do
+        (* get element at arr[start_val+i] *)
+        let src_gep = L.build_in_bounds_gep (lookup id local_vars)
+            [| zero; L.const_int i32_t (start_val + i) |]
+            "slice1d_src" builder
+        in
+        let v = L.build_load src_gep "slice1d_v" builder in
+        (* store at dest[i]*)
+        let dst_gep = L.build_in_bounds_gep res_ptr
+            [| zero; L.const_int i32_t i |]
+            "slice1d_dst" builder
+        in
+        ignore (L.build_store v dst_gep builder)
+      done;
+      
+      (* return pointer to new array *)
+      res_ptr
+    in
+
+    let build_arr_2d_slice builder local_vars ((elem_ty, m, n), var) as id start_row_index end_row_index start_col_index end_col_index = 
+      let arr_ptr = build_expr builder local_vars id in
+        
+      let new_row_size = end_row_index - start_row_index in
+      let new_col_size = end_col_index - start_col_index in
+    
+      (* allocate result [new_row_size x type size][new_col_size x type size] *)
+      let llvm_arr_ty = ltype_of_typ Arr2D(elem_ty, new_row_size, new_col_size) in
+      let res_ptr = L.build_alloca llvm_ar_ty ("_slice2d") builder in
+      let zero   = L.const_int i32_t 0 in
+
+      (* loop to copy elements *)
+      for i = 0 to new_row_size - 1 do
+        for j = 0 to new_col_size - 1 do
+          (* get element at arr[start_row_index+i][start_col_index+j] *)
+          let src_gep = L.build_in_bounds_gep (lookup arr_id local_vars)
+              [| zero
+               ; L.const_int i32_t (r0 + i)
+               ; L.const_int i32_t (c0 + j)
+              |]
+              "slice2d_src" builder
+          in
+          let v = L.build_load src_gep "slice2d_v" builder in
+          let dst_gep = L.build_in_bounds_gep res_ptr
+              [| zero
+               ; L.const_int i32_t i
+               ; L.const_int i32_t j
+              |]
+              "slice2d_dst" builder
+          in
+          ignore (L.build_store v dst_gep builder)
+        done
+      done;
+
+      (* return pointer to new array *)
+      res_ptr
+    in
+    
+    (* Construct code for an expression; return its a pointer to where it's value is *)
     let rec build_expr builder local_vars ((ty, e) : sexpr) = match e with
         SIntLit i  -> L.const_int i32_t i
       | SDoubleLit d -> L.const_float double_t d
-      | SBoolLit b  -> L.const_int i1_t (if b then 1 else 0)
+      | SBoolLit b  -> L.const_int i1_t (if b then 1 else 0) 
       | SCharLit c -> L.const_int i8_t (Char.code c)
       | SStringLit s -> L.build_global_stringptr s ".str" builder
       | SArr1DLit elems ->
@@ -214,6 +747,8 @@ let translate (globals, functions) =
       | SId s       -> L.build_load (lookup s local_vars) s builder
       | SAssign (s, e) -> let e' = build_expr builder local_vars e in
         ignore(L.build_store e' (lookup s local_vars) builder); e'
+      | SBinop ((A.Arr2D, _) as e1), A.Mmult, ((A.Arr2D, _) as e2) ->
+          build_arr2d_mmult builder local_vars e1 e2
       | SBinop ((A.Double, _) as e1, op, (A.Double, _) as e2) ->
         let e1' = build_expr builder local_vars e1
         and e2' = build_expr builder local_vars e2 in
@@ -231,32 +766,23 @@ let translate (globals, functions) =
           | A.Ge   -> L.build_fcmp L.Fcmp.Oge
           | _      -> raise (Failure("error: not a viable double-double operation"))
           ) e1' e2' "tmp" builder
-      (* mismatching types for matrix * scalar multiplication *)
+      (* mismatching types for array * scalar multiplication *)
       | SBinop((A.Arr1D(_, _), _) as e1, op, e2) ->
-        let e1' = build_expr builder local_vars e1
-        and e2' = build_expr builder local_vars e2 in
-        match (e1, op, e2) with 
-          | ((Arr1D(A.Int, _), _), A.Mult, A.Int) -> (* 1d array * int function *)
-          | ((Arr1D(A.Double, _), _), A.Mult, A.Double) -> (* 1d array * double function *)
+        match (e1, op, e2) with` 
+          | ((Arr1D(A.Int, _), _), A.Mult, A.Int) -> build_arr_1d_int_mult builder local_vars e1 e2
+          | ((Arr1D(A.Double, _), _), A.Mult, A.Double) -> build_arr_1d_double_mult builder local_vars e1 e2
       | SBinop(e1, op, (A.Arr1D(_, _), _) as e2) ->
-        let e1' = build_expr builder local_vars e1
-        and e2' = build_expr builder local_vars e2 in
         match (e1, op, e2) with 
-          | (A.Int, A.Mult, (Arr1D(A.Int, _), _)) -> (* 1d array * int function *)
-          | (A.Double, A.Mult, (Arr1D(A.Double, _), _)) -> (* 1d array * double function *)
+          | (A.Int, A.Mult, (Arr1D(A.Int, _), _)) -> build_arr_1d_int_mult builder local_vars e2 e1
+          | (A.Double, A.Mult, (Arr1D(A.Double, _), _)) -> build_arr_1d_double_mult builder local_vars e2 e1
       | SBinop((A.Arr2D(_, _), _) as e1, op, e2) ->
-        let e1' = build_expr builder local_vars e1
-        and e2' = build_expr builder local_vars e2 in
         match (e1, op, e2) with 
-          | ((Arr2D(A.Int, _), _), A.Mult, A.Int) -> (* 2d array * int function *)
-          | ((Arr2D(A.Double, _), _), A.Mult, A.Double) -> (* 2d array * double function *)
+          | ((Arr2D(A.Int, _), _), A.Mult, A.Int) -> build_arr_2d_int_mult builder local_vars e1 e2
+          | ((Arr2D(A.Double, _), _), A.Mult, A.Double) -> build_arr_2d_double_mult builder local_vars e1 e2
       | SBinop(e1, op, (A.Arr2D(_, _), _) as e2) ->
-        let e1' = build_expr builder local_vars e1
-        and e2' = build_expr builder local_vars e2 in
         match (e1, op, e2) with 
-          | (A.Int, A.Mult, (Arr2D(A.Int, _), _)) -> (* 2d array * int function *)
-          | (A.Double, A.Mult, (Arr2D(A.Double, _), _)) -> (* 2d array * double function *)
-
+          | (A.Int, A.Mult, (Arr2D(A.Int, _), _)) -> build_arr_2d_int_mult builder local_vars e2 e1
+          | (A.Double, A.Mult, (Arr2D(A.Double, _), _)) -> build_arr_2d_double_mult builder local_vars e2 e1
       (* General binop case: ints, bools, chars, strings *)
       | SBinop (e1, op, e2) ->        
         let e1' = build_expr builder local_vars e1
@@ -275,16 +801,128 @@ let translate (globals, functions) =
           | A.Ge   -> L.build_icmp L.Icmp.Sge
           | _      -> raise (Failure("error: not a viable int-int operation"))
         ) e1' e2' "tmp" builder
-      | SUop() ->
-      | SArr1DAssign() ->
-      | SArr2DAssign() ->
-      | SArr1DAccess() ->
-      | SArr2DAccess() ->
-      | SArrOp() ->
-      | SArrUop() ->
-      | SArr1DSlice() ->
-      | SArr2DSlice() ->
-      | SNoExpr() ->  
+      | SUop(e1, op, e2) -> 
+      | SUop (op, ((ty, _) as e1)) ->
+        let e1' = build_expr builder local_vars e1
+        (match op with
+          | A.Not                    -> L.build_not
+          | A.Neg when ty = A.Double -> L.build_fneg
+          | A.Neg                    -> L.build_neg
+        )  e1' "tmp" builder
+      | SArr1DAssign(id, (index_ty, index_s) as i, (value_ty, value_s) as v) ->
+          (* get ptrs and values *)
+          let arr_ptr = build_expr builder local_vars id in
+          let index_val = build_expr builder local_vars index_s in
+          let scalar_val = build_expr builder local_vars value_s in
+
+          (* load arr_ptr[index_val] *)
+          let arr_elem_gep =
+            L.build_in_bounds_gep arr_ptr
+              [| L.const_int i32_t 0; index_val |]
+              "arr_gep" builder
+          in
+          (* store value *)
+          ignore (L.build_store scalar_val arr_elem_gep builder)
+
+          (* return the stored value *)
+          scalar_val
+      | SArr2DAssign(id, (row_index_ty, row_index_s) as r, (col_index_ty, col_index_s) as c, (value_ty, value_s) as v) ->
+        let arr_ptr = build_expr builder local_vars id in
+        let row_index_val = build_expr builder local_vars row_index_s in
+        let col_index_val = build_expr builder local_vars col_index_s in 
+        let scalar_val = build_expr builder local_vars value_s in
+
+        (* pointer to row i of source *)
+         let arr_row_ptr =
+          L.build_in_bounds_gep arr_ptr
+            [| L.const_int i32_t 0; row_index_val |]
+            "arr_row" builder
+        in
+
+        (* load arr_ptr[index_val] *)
+        let arr_elem_gep =
+          L.build_in_bounds_gep arr_row_ptr
+            [| L.const_int i32_t 0; col_index_val |]
+            "arr_gep" builder
+        in
+        (* store value *)
+        ignore (L.build_store scalar_val arr_elem_gep builder)
+        
+        (* return the stored value *)
+        scalar_val
+      | SArr1DAccess(id, (index_ty, index_s) as i, (value_ty, value_s) as v) ->
+        (* get ptrs and values *)
+        let arr_ptr = build_expr builder local_vars id in
+        let index_val = build_expr builder local_vars index_s in
+        let scalar_val = build_expr builder local_vars value_s in
+
+        (* load arr_ptr[index_val] *)
+        let arr_elem_gep =
+          L.build_in_bounds_gep arr_ptr
+            [| L.const_int i32_t 0; index_val |]
+            "arr_gep" builder
+        in
+        (* return the accessed value *)
+        L.build_load arr_elem_gep "src_val" builder
+      | SArr2DAccess(id, (row_index_ty, row_index_s) as r, (col_index_ty, col_index_s) as c, (value_ty, value_s) as v) ->
+        let arr_ptr = build_expr builder local_vars id in
+        let row_index_val = build_expr builder local_vars row_index_s in
+        let col_index_val = build_expr builder local_vars col_index_s in 
+        let scalar_val = build_expr builder local_vars value_s in
+
+        (* pointer to row i of source *)
+         let arr_row_ptr =
+          L.build_in_bounds_gep arr_ptr
+            [| L.const_int i32_t 0; row_index_val |]
+            "arr_row" builder
+        in
+
+        (* load arr_ptr[index_val] *)
+        let arr_elem_gep =
+          L.build_in_bounds_gep arr_row_ptr
+            [| L.const_int i32_t 0; col_index_val |]
+            "arr_gep" builder
+        in
+        (* retrieve the value at the index and return *)
+        L.build_load src_elem_gep "src_val" builder
+      | SArrOp(op, (ty, arr_se) as arr_expr, func_name) -> 
+        (match op with
+          | A.Map    ->
+            (match ty with
+            | A.Arr1D (_) -> build_map_arr_1d builder local_vars arr_expr func_name
+            | A.Arr2D (_) -> build_map_arr_2d builder local_vars arr_expr func_name
+            | _ -> raise (Failure("huh"))
+            )
+          | A.Reduce ->
+            (match ty with
+            | A.Arr1D (_) -> build_reduce_arr_1d builder local_vars arr_expr func_name
+            | A.Arr2D (_) -> build_reduce_arr_2d builder local_vars arr_expr func_name
+            | _ -> raise (Failure("wat"))
+            )
+        )
+      | SArrUop(op, (ty, arr_se) as arr_expr) ->
+        (match op with
+          | A.Length    -> 
+            (match ty with
+            | A.Arr1D (_, n) ->
+                L.const_int i32_t n
+            | A.Arr2D (_, m, _) ->
+                L.const_int i32_t m
+            | _ ->
+                failwith "Length operator on non-array")
+          | A.Transpose -> build_arr_2d_transpose builder local_vars arr_expr
+        )
+      | SArr1DSlice(id,
+                    (A.Int, SIntLit start_index),
+                    (A.Int, SIntLit end_index)) -> 
+          build_arr_1d_slice builder local_vars id start_index end_index
+      | SArr2DSlice(id, 
+                    (A.Int, SIntLit start_row_index), 
+                    (A.Int, SIntLit end_row_index), 
+                    (A.Int, SIntLit start_col_index), 
+                    (A.Int, SIntLit end_col_index)) -> 
+          build_arr_2d_slice builder local_vars start_row_index end_row_index start_col_index end_col_index
+      | SNoExpr() ->  L.const_int i32_t  0
       | SCall ("print_int", [e]) ->
         L.build_call printf_func [| int_format_str ; (build_expr builder local_vars e) |]
           "printf" builder
@@ -297,7 +935,7 @@ let translate (globals, functions) =
       | SCall ("print_bool", [e]) ->
         let bool_val = build_expr builder local_vars e in (* i1 result of e *)
         let chosen =
-          L.build_select bool_val                     (* i1 condition        *)
+          L.build_select bool_val                    (* i1 condition        *)
                         true_str                     (* i8* if true         *)
                         false_str                    (* i8* if false        *)
                         "bool_as_str" builder
@@ -399,10 +1037,3 @@ let translate (globals, functions) =
 
   List.iter build_function_body functions;
   the_module
-
-  (* TODO:
-    - build_expr:
-      - finish binop implementation of 1d/2d array * int/double (need to write LLVM functions)
-      - uop
-      - all array operations
-  *)

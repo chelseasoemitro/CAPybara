@@ -1,8 +1,12 @@
-.PHONY: clean run all
+.PHONY: all
 
-run: test_parse test_semantic
+run_tests: capybara test_parse test_semantic
 	cat example2.cap | ./test_parse.native
 	cat example2.cap | ./test_semantic.native
+	cat example2.cap | ./capybara.native
+
+capybara: 
+	ocamlbuild capybara.native
 
 test_parse:
 	ocamlbuild test_parse.native
@@ -13,4 +17,4 @@ test_semantic:
 clean:
 	rm *.native
 
-all: run clean
+all: clean run_tests
