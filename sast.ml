@@ -68,7 +68,6 @@ let string_of_sop = function
   | Mult -> "*"
   | Div -> "/"
   | Mod -> "%"
-  | Pow -> "^"
   | Mmult -> "@"
 
 let string_of_suop = function

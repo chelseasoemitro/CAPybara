@@ -1,4 +1,4 @@
-type bop = Add | Sub | Mult | Div | Mod | Pow | 
+type bop = Add | Sub | Mult | Div | Mod | 
             Equal | Neq | Lt | Gt | Le | Ge | 
             And | Or | 
             Mmult
@@ -78,7 +78,6 @@ let string_of_op = function
   | Mult -> "*"
   | Div -> "/"
   | Mod -> "%"
-  | Pow -> "^"
   | Mmult -> "@"
 
 let string_of_uop = function
