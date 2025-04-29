@@ -25,5 +25,12 @@
        match !action with
          Ast     -> ()
        | Sast    -> print_string (Sast.string_of_sprogram sast)
-       | LLVM_IR -> print_string (Llvm.string_of_llmodule (Codegen.translate sast))
+       | LLVM_IR -> 
+          (* after you’ve built [the_module] *)
+          let oc = open_out "program.ll" in
+          output_string oc (Llvm.string_of_llmodule (Codegen.translate sast));
+          close_out oc;
+        
+        (* print_string (Llvm.string_of_llmodule (Codegen.translate sast)) *)
    
+
