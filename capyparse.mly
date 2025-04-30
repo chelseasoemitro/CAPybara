@@ -4,38 +4,38 @@
 open Ast
 %}
 
-(* Parentheses and brackets *)
+/* Parentheses and brackets */
 %token L_PAREN R_PAREN L_CBRACE R_CBRACE L_SQBRACE R_SQBRACE
 
-(* Delimiters *)
+/* Delimiters */
 %token SEMI COMMA
 
-(* Arithmetic operators *)
+/* Arithmetic operators */
 %token PLUS MINUS MULT DIV MOD
 
-(* Assignment *)
+/* Assignment */
 %token ASSIGN
 
-(* Relational operators *)
+/* Relational operators */
 %token EQ NEQ LT LE GT GE
 
-(* Logical operators *)
+/* Logical operators */
 %token NOT AND OR
 
-(* Statements and function keywords *)
+/* Statements and function keywords */
 %token IF ELSE WHILE FOR BREAK RETURN VOID
 
-(* Primitive types *)
+/* Primitive types */
 %token INT DOUBLE BOOL CHAR STRING
 
-(* Literals *)
+/* Literals */
 %token <int> INT_LIT
 %token <float> DOUBLE_LIT
 %token <bool> BOOL_LIT
 %token <char> CHAR_LIT
 %token <string> STRING_LIT
 
-(* Array Operators *)
+/* Array Operators */
 %token COLON MMULT LENGTH TRANSPOSE MAP REDUCE
 
 %token <string> ID
@@ -44,7 +44,7 @@ open Ast
 %start program
 %type <Ast.program> program
 
-(* lowest precedence *)
+/* lowest precedence */
 %nonassoc NO_ELSE
 %nonassoc ELSE
 %right ASSIGN 
@@ -59,7 +59,7 @@ open Ast
 %left LENGTH TRANSPOSE MAP REDUCE
 %right NOT NEG
 %nonassoc L_PAREN R_PAREN L_SQBRACE R_SQBRACE
-(* highest precedence *)
+/* highest precedence */
 
 %%
 

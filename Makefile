@@ -1,20 +1,21 @@
-.PHONY: all
+OCB=ocamlbuild -use-ocamlfind -pkg llvm
+TARGET=capybara.native
 
-run_tests: capybara test_parse test_semantic
-	cat example2.cap | ./test_parse.native
-	cat example2.cap | ./test_semantic.native
-	cat example2.cap | ./capybara.native
+.PHONY: all tests clean run_example1 run_example2
 
-capybara: 
-	ocamlbuild capybara.native
+all: $(TARGET)
 
-test_parse:
-	ocamlbuild test_parse.native
+$(TARGET):
+	$(OCB) $(TARGET)
 
-test_semantic:
-	ocamlbuild test_semantic.native
+run_example1:
+	./capybara.native -c example.cap
+	lli a.out
+
+run_example2:
+	./capybara.native -c example2.cap
+	lli a.out
 
 clean:
-	rm *.native
-
-all: clean run_tests
+	$(OCB) -clean
+	rm -f parser.ml parser.mli parser.output scanner.ml a.out
