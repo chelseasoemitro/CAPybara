@@ -2,7 +2,7 @@
    check the resulting AST and generate an SAST from it, generate LLVM IR,
    and dump the module *)
 
-   type action = Ast | Sast | LLVM_IR
+   type action = Ast | Sast | LLVM_IR | Compile
 
    let () =
      let action = ref LLVM_IR in
@@ -11,8 +11,9 @@
        ("-a", Arg.Unit (set_action Ast), "Print the AST");
        ("-s", Arg.Unit (set_action Sast), "Print the SAST");
        ("-l", Arg.Unit (set_action LLVM_IR), "Print the generated LLVM IR");
+       ("-c", Arg.Unit (set_action Compile), "Dump the compiled program to a.out")
      ] in
-     let usage_msg = "usage: ./capybara.native [-a|-s|-l] [file.mc]" in
+     let usage_msg = "usage: ./capybara.native [-a|-s|-l|-c] [file.cap]" in
      let channel = ref stdin in
      Arg.parse speclist (fun filename -> channel := open_in filename) usage_msg;
    
@@ -25,12 +26,8 @@
        match !action with
          Ast     -> ()
        | Sast    -> print_string (Sast.string_of_sprogram sast)
-       | LLVM_IR -> 
-          (* after you’ve built [the_module] *)
-          let oc = open_out "program.ll" in
+       | LLVM_IR -> print_string (Llvm.string_of_llmodule (Codegen.translate sast))
+       | Compile -> 
+          let oc = open_out "a.out" in
           output_string oc (Llvm.string_of_llmodule (Codegen.translate sast));
           close_out oc;
-        
-        (* print_string (Llvm.string_of_llmodule (Codegen.translate sast)) *)
-   
-
