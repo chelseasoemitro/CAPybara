@@ -1790,7 +1790,7 @@ let translate (globals, functions) =
     let func_builder = fst (build_stmt (builder, formal_vars, None) (SBlock fdecl.sbody)) in
 
     (* Add a return if the last block falls off the end *)
-    add_terminal func_builder (L.build_ret (L.const_int i32_t 0))
+    add_terminal func_builder (L.build_ret_void)
 
   in
 
