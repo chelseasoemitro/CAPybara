@@ -174,17 +174,12 @@ let translate (globals, functions) =
 
     (* Return the value for a variable or formal argument.
        Check local names first, then global names *)
-    let lookup n local_vars ty builder = 
+    let lookup n local_vars is_arr builder = 
       match StringMap.find_opt n local_vars with
         | Some(slot) -> slot
         | None ->
           let slot = StringMap.find n global_vars in
-          (match ty with
-          | A.Arr1D _ | A.Arr2D _ ->
-              L.build_load slot (n ^ "_body_ptr") builder
-          | _ ->
-              slot
-          )
+          if is_arr then L.build_load slot (n ^ "_body_ptr") builder else slot
     in
 
     let arr_1d_memcpy builder local_vars len src_body_ptr dst_body_ptr  =
@@ -296,14 +291,24 @@ let translate (globals, functions) =
             alloca_ptr
           | _ -> raise (Failure "empty 2-D array literal")) 
       | SId s -> 
-        let ptr = lookup s local_vars ty builder in
-        (match ty with
-        | A.Arr1D _ | A.Arr2D _ -> ptr          (* leave it as a pointer *)
-        | _ -> L.build_load ptr s builder       (* scalars: load the value *)
-        )
+        let is_arr = 
+          (match ty with
+            | A.Arr1D _ | A.Arr2D _ -> true
+            | _ -> false 
+          )
+        in
+        let ptr = lookup s local_vars is_arr builder in
+        if is_arr then ptr else L.build_load ptr s builder
       | SAssign (s, e) -> 
         let e' = build_expr builder local_vars e in
-        let body_ptr = lookup s local_vars ty builder in
+
+        let is_arr = 
+          (match ty with
+            | A.Arr1D _ | A.Arr2D _ -> true 
+            | _ -> false  
+          ) 
+        in
+        let body_ptr = lookup s local_vars is_arr builder in
 
         let () = 
           (match ty with
@@ -311,7 +316,7 @@ let translate (globals, functions) =
             ignore(arr_1d_memcpy builder local_vars len e' body_ptr)
           | A.Arr2D (elem_ty, m, n) ->
             ignore(arr_2d_memcpy builder local_vars m n e' body_ptr)
-          | _ -> ignore(L.build_store e' (lookup s local_vars ty builder) builder)
+          | _ -> ignore(L.build_store e' (lookup s local_vars is_arr builder) builder)
           ) in
         e'
       | SBinop (((A.Arr1D(_, _), _) as e1), op, ((A.Arr1D(_, _), _) as e2)) ->
@@ -402,7 +407,7 @@ let translate (globals, functions) =
         )  e1' "tmp" builder
       | SArr1DAssign (id, ((index_ty, index_s) as i), ((value_ty, value_s) as v)) ->
           (* get ptrs and values *)
-          let arr_ptr = lookup id local_vars ty builder in
+          let arr_ptr = lookup id local_vars true builder in
           let index_val = build_expr builder local_vars i in
           let scalar_val = build_expr builder local_vars v in
 
@@ -418,7 +423,7 @@ let translate (globals, functions) =
           (* return the stored value *)
           scalar_val
       | SArr2DAssign (id, ((row_index_ty, row_index_s) as r), ((col_index_ty, col_index_s) as c), ((value_ty, value_s) as v)) ->
-        let arr_ptr = lookup id local_vars ty builder in
+        let arr_ptr = lookup id local_vars true builder in
         let row_index_val = build_expr builder local_vars r in
         let col_index_val = build_expr builder local_vars c in 
         let scalar_val = build_expr builder local_vars v in
@@ -443,7 +448,7 @@ let translate (globals, functions) =
         scalar_val
       | SArr1DAccess (id, ((index_ty, index_s) as i)) ->
         (* get ptrs and values *)
-        let arr_ptr = lookup id local_vars ty builder in
+        let arr_ptr = lookup id local_vars true builder in
         let index_val = build_expr builder local_vars i in
 
         (* load arr_ptr[index_val] *)
@@ -455,7 +460,8 @@ let translate (globals, functions) =
         (* return the accessed value *)
         L.build_load arr_elem_gep "src_val" builder
       | SArr2DAccess (id, ((row_index_ty, row_index_s) as r), ((col_index_ty, col_index_s) as c)) ->
-        let arr_ptr = lookup id local_vars ty builder in
+        print_string(string_of_typ ty);
+        let arr_ptr = lookup id local_vars true builder in
         let row_index_val = build_expr builder local_vars r in
         let col_index_val = build_expr builder local_vars c in 
 
@@ -1602,7 +1608,7 @@ let translate (globals, functions) =
     and
     
     build_arr_1d_slice builder local_vars id ty start_index =
-      let arr_ptr = lookup id local_vars ty builder in
+      let arr_ptr = lookup id local_vars true builder in
       let elem_ty, len =
         (match ty with
           | A.Arr1D(elem_ty, n) -> elem_ty, n
@@ -1635,7 +1641,7 @@ let translate (globals, functions) =
     and
 
     build_arr_2d_slice builder local_vars id ty start_row_index start_col_index = 
-      let arr_ptr = lookup id local_vars ty builder in
+      let arr_ptr = lookup id local_vars true builder in
       let elem_ty, m, n =
       (match ty with
         | A.Arr2D(elem_ty, m, n) -> elem_ty, m, n
