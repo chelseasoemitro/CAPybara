@@ -1556,7 +1556,7 @@ let translate (globals, functions) =
         ) in
 
       (* allocate result [len x i32] *)
-      let llvm_arr_ty = ltype_of_typ ty in
+      let llvm_arr_ty = ltype_of_typ (A.Arr1D(elem_ty, m)) in
       let res_ptr = L.build_alloca llvm_arr_ty (func_name ^ "_reduce2d") builder in
       let zero = L.const_int i32_t 0 in
 
@@ -1567,8 +1567,12 @@ let translate (globals, functions) =
         let gep00 = L.build_in_bounds_gep arr_ptr [| zero; i_idx; zero |] "red2d_src00" builder in
         let acc_row0 = L.build_load gep00 "red2d_acc00" builder in
         (* accumulate row arr[i] into value dst[i] *)
-        let dst00 = L.build_in_bounds_gep res_ptr [| zero; i_idx; zero |] "red2d_dst00" builder in
-        ignore (L.build_store acc_row0 dst00 builder); (* store initial value of arr[i][0] into dst[i]*)
+        let dst0 =
+          L.build_in_bounds_gep res_ptr
+            [| zero; i_idx |]
+            "reduce2d_dst0" builder
+        in
+        ignore (L.build_store acc_row0 dst0 builder);
         let acc = ref acc_row0 in
 
         (* j = 1..n-1: acc = f(acc, arr[i][j]); out[i][j] = acc *)
@@ -1582,11 +1586,15 @@ let translate (globals, functions) =
             L.build_call fn_val [| !acc; v |] (func_name ^ "_call") builder
           in
           acc := new_acc;
-          let dstij =
-            L.build_in_bounds_gep res_ptr [| zero; i_idx; j_idx |] "scan2d_dstij" builder
-          in
-          ignore (L.build_store !acc dstij builder)
-        done
+        done;
+
+        (* store the final accumulator into res[i] *)
+        let dst_i =
+          L.build_in_bounds_gep res_ptr
+            [| zero; i_idx |]
+            "reduce2d_dsti" builder
+        in
+        ignore (L.build_store !acc dst_i builder)
       done;
     
       (* return ptr to the new array of reduced rows *)
