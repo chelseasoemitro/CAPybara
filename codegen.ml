@@ -460,7 +460,6 @@ let translate (globals, functions) =
         (* return the accessed value *)
         L.build_load arr_elem_gep "src_val" builder
       | SArr2DAccess (id, ((row_index_ty, row_index_s) as r), ((col_index_ty, col_index_s) as c)) ->
-        print_string(string_of_typ ty);
         let arr_ptr = lookup id local_vars true builder in
         let row_index_val = build_expr builder local_vars r in
         let col_index_val = build_expr builder local_vars c in 
