@@ -1,0 +1,11 @@
+double double_global = 6.5;
+
+void main() {
+	// Global
+	print_double(double_global);
+
+	// Local
+	double double_local;
+	double_local = 5.0;
+    print_double(double_local);
+}

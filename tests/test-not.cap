@@ -1,0 +1,5 @@
+void main() {
+    print_bool(!true);
+}
+
+// Expected: false

@@ -1,0 +1,82 @@
+int[4] arr1d_global = [5, 6, 7, 8];
+int[3][3] arr2d_global = [10, 11, 12; 13, 14, 15; 16, 17, 18;]
+
+
+int int_map(int elem) {
+    return elem + 1;
+}
+
+bool bool_map(bool elem) {
+    return !elem;
+}
+
+char char_map(char elem) {
+    if (elem == 't') {
+        return 'f';
+    }
+    if (elem == 'f') {
+        return 't';
+    }
+
+    return 'a';
+}
+
+string string_map(string elem) {
+    return "meep";
+}
+
+/* 
+
+MULTI LINE COMMENT 
+
+DONE 
+
+*/
+
+void main() { 
+    // Global Int Mapping
+    int[4] arr1d_global_after_map = map(arr1d_global, int_map);
+    int[3][3] arr2d_global_after_map = map(arr2d_global, int_map);
+    
+    for(int i = 0; i < length(arr1d_global_after_map); i = i + 1) {
+        print_int(arr1d_global_after_map[i]);
+    }
+
+    for(int i = 0; i < length(arr2d_global_after_map); i = i + 1) {
+        for(int j = 0; j < length(arr2d_global_after_map[0]); j = j + 1) {
+            print_int(arr2d_global_after_map[i][j]);
+        }
+    }
+
+
+    // Local
+    bool[3] bool_arr = [true, true, false];
+    char[3][2] char arr = ['t', 't', 'f'; 'f', 't', 'f';];
+    string[2] string_arr = ['hello', 'world'];
+    
+    // Local Bool Mapping
+    bool[3] bool_arr_after_map = map(bool_arr, bool_map);
+
+    // Local Char Mapping
+    char[3][2] char_arr_after_map = map(char_arr, char_map);
+
+    // Local String Map
+    string[2] string_arr_after_map = map(string_arr, string_map);
+
+    // Print Bool Mapping
+    for(int i = 0; i < length(bool_arr_after_map); i = i + 1) {
+        print_bool(bool_arr_after_map[i]);
+    }
+
+    // Print Char Mapping
+    for(int i = 0; i < length(char_arr_after_map); i = i + 1) {
+        for(int j = 0; j < length(char_arr_after_map[0]); j = j + 1) {
+            print_char(char_arr_after_map[i][j]);
+        }
+    }
+
+    // Print String Mapping
+    for(int i = 0; i < length(string_arr_after_map); i = i + 1) {
+        print_string(string_arr_after_map[i]);
+    }
+}

@@ -1,0 +1,11 @@
+int int_global = 55;
+
+void main() {
+	// Global
+	print_int(int_global);
+	
+	// Local
+	int int_local;
+	int_local = 7;
+    print_int(int_local);
+}

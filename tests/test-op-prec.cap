@@ -1,0 +1,33 @@
+int int_map(int elem) {
+    return elem + 1;
+}
+
+void main() {
+	int x = 5;
+	int y = 2;
+
+	int z = x * y; // x * y = 10
+	print_int(z);
+
+	z = z / 2; // z / 2 = 5
+	print_int(z);
+
+	int m = x % y; // x % y = 1
+	print_int(m);
+	
+	int a = x + y; // x + y = 7
+	print_int(a);
+
+	int b = x - y; // x - y = 3
+	print_int(b);
+	
+	int p;
+	p = (b - z * 10 / 5) + 7; // 0
+	print_int(p);
+
+	int[3] i = [1, 2, 3];
+	int[3] res = map(i, int_map) * 2; // [4, 6, 8]
+	for(int i = 0; i < length(res); i = i + 1) {
+        print_int(res[i]);
+    }
+}

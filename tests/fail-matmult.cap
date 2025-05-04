@@ -1,0 +1,5 @@
+void main() {
+    int[2][2] a = [1, 2; 3, 4;]; 
+    int [3][2] b = [1, 2; 3, 4; 5, 6;]; 
+    int [2][2] c = a @ b; // doesn't work, mismatched dimensions 
+}

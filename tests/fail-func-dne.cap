@@ -1,0 +1,17 @@
+float floaty(float x) {
+    return x + 5.0;
+}
+
+float wrong_args() {
+    return 5.0;
+}
+
+void main() {
+	int x = 5;
+	float y = 5.0;
+
+    // fails func does not exist
+    x = inty(x);
+
+	print_int(x); 
+}

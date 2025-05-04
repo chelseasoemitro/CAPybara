@@ -1,0 +1,8 @@
+void main() {
+    int x = 0;
+    int y = 2;
+
+    while(x + y) { // not a boolean expression
+        print_str("this should fail");
+    }
+}

@@ -1,0 +1,9 @@
+int int_global = 5;
+double double_global = 7.5;
+
+void main() {
+    int int_local = 2;
+    double double_local = 3.0;
+    print_int(int_global % int_local);
+    print_double(double_global % double_local);
+}

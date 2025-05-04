@@ -1,0 +1,4 @@
+void main() {
+    int[2][2] arr2d;
+    arr2d = [1, 2; 3, 4; 5, 6;]; // fails -- wrong dimensions
+}

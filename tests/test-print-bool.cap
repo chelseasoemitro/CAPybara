@@ -1,0 +1,11 @@
+bool bool_global = false;
+
+void main() {
+	// Global
+	print_bool(bool_global);
+
+	// Local
+	bool bool_local;
+	bool_local = true;
+    print_bool(bool_local);
+}

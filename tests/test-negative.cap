@@ -1,0 +1,11 @@
+void main() {
+    int int_local = 5;
+    double double_local = 2.5;
+    print_int(-int_local);
+    print_double(-double_local);
+}
+
+/* Expected:
+-5
+-2.5
+*/ 

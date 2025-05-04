@@ -1,0 +1,11 @@
+char char_global = 'd';
+
+void main() {
+    // Global
+    print_char(char_global);
+
+    // Local
+	char char_local;
+    char_local = 'c';
+    print_char(char_local);
+}

@@ -1,0 +1,15 @@
+int[4] arr_global = [5, 6, 7, 8];
+
+void main() {
+    // Global
+    for(int i = 0; i < length(arr_global); i = i + 1) {
+        print_int(arr_global[i]);
+    }
+
+    // Local
+    int[4] arr_local = [1, 2, 3, 4];
+
+    for(int i = 0; i < length(arr_local); i = i + 1) {
+        print_int(arr_local[i]);
+    }
+}

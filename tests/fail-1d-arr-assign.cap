@@ -1,0 +1,4 @@
+void main() {
+    double[3] arr1d = [1.0, 2.0, 3.0];
+    arr1d[2] = 4; // fail -- assigning int to a double
+}

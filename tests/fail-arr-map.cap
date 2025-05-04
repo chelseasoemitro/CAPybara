@@ -1,0 +1,8 @@
+int int_map(int elem) {
+    return elem + 1;
+}
+
+void main() {
+    double[4] arr1d = [5.0, 6.0, 7.0, 8.0];
+    double[4] mapped_arr1d = map(arr1d, int_map); // fails because int_map takes ints
+}

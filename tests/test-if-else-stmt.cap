@@ -1,0 +1,19 @@
+void main() {
+	int x = 5;
+
+	if(x == 5) {
+		print_str("true");
+	}
+
+	if(x == 5 && false) {
+		print_str("true");
+	} else {
+		print_str("false");
+	}
+
+	if(x == 6) {
+		print_str("dupe");
+	} else {
+		print_str("hi");
+	} 
+}

@@ -1,0 +1,11 @@
+string string_global = "capybara capybara";
+
+void main() {
+	// Global
+	print_str(string_global);
+
+	// Local
+	string string_local;
+	string_local = "hello world";
+    print_str(string_local);
+}
