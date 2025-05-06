@@ -87,8 +87,9 @@ rule token = parse
 
 
 and singlecomment = parse
-'\n' { token lexbuf }
-| _    { singlecomment lexbuf }
+'\n'    { token lexbuf }
+| eof   { EOF }
+| _     { singlecomment lexbuf }
 
 and multicomment = parse
   "*/" { token lexbuf }
