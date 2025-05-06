@@ -1,14 +1,14 @@
 double[4] arr1d_global = [5.0, 6.0, 7.0, 8.0];
-int[3][3] arr2d_global = [10, 11, 12; 13, 14, 15; 16, 17, 18;]
+int[3][3] arr2d_global = [10, 11, 12; 13, 14, 15; 16, 17, 18;];
 
 void main() {
     // Global
-    double[4] scaled_1d_global = arr1d_global * 2.5;
+    double[4] scaled_1d_global = arr1d_global * 2.0; // [10.0, 12.0, 14.0, 16.0]
     for(int i = 0; i < length(scaled_1d_global); i = i + 1) {
         print_double(scaled_1d_global[i]);
     }
 
-    int[3][3] scaled_2d_global = arr2d_global * 2;
+    int[3][3] scaled_2d_global = arr2d_global * 2; // [20, 22, 24; 26, 28, 30; 32, 34, 36;]
     for(int i = 0; i < length(scaled_2d_global); i = i + 1) {
         for(int j = 0; j < length(scaled_2d_global[0]); j = j + 1) {
             print_int(scaled_2d_global[i][j]);
@@ -17,14 +17,14 @@ void main() {
 
     // Locals
     int[4] arr1d_local = [1, 2, 3, 4];
-    double[3][3] arr2d_local = [1.0, 2.0, 3.0; 4.0, 5.0, 6.0; 7.0, 8.0, 9.0;]
+    double[3][3] arr2d_local = [1.0, 2.0, 3.0; 4.0, 5.0, 6.0; 7.0, 8.0, 9.0;];
 	
-    int[4] scaled_1d_local = arr1d_local * 3;
+    int[4] scaled_1d_local = arr1d_local * 3; // [3, 6, 9, 12]
     for(int i = 0; i < length(scaled_1d_local); i = i + 1) {
         print_int(scaled_1d_local[i]);
     }
 
-    double[3][3] scaled_2d_local = arr2d_local * 1.5;
+    double[3][3] scaled_2d_local = arr2d_local * 1.5; // [1.5, 3.0, 4.5; 6.0, 7.5, 9.0; 10.5, 12.0, 13.5;]
     for(int i = 0; i < length(scaled_2d_local); i = i + 1) {
         for(int j = 0; j < length(scaled_2d_local[0]); j = j + 1) {
             print_double(scaled_2d_local[i][j]);

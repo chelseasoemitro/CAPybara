@@ -1,9 +1,8 @@
 void main() {
 	int x = 5;
-	float y = 5.0;
+	double y = 5.0;
 
 	int z = x + y; // cannot add x and y - no automatic casting
-	int a = x + 5.0; // also shouldn't work
 
 	print_int(p); 
 }

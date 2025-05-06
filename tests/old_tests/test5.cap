@@ -1,4 +1,0 @@
-void main() {
-	int[3] arr = [1, 2, 3];
-	print_int(arr[1]);
-}

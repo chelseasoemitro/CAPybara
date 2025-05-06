@@ -10,9 +10,9 @@ void main() {
     }
 
     global_arr2d = ['a', 'b'; 'c', 'd';];
-    for(i = 0; i < length(global_arr2d); i = i + 1) {
+    for(int i = 0; i < length(global_arr2d); i = i + 1) {
         for(int j = 0; j < length(global_arr2d[0]); j = j + 1) {
-            print_double(global_arr2d[i][j]);
+            print_char(global_arr2d[i][j]);
         }
     }
 
@@ -25,10 +25,27 @@ void main() {
     }
 
     double[2][2] arr2d;
-    arr2d = [2.0, 4.0; 8.0, 10.0];
-    for(i = 0; i < length(arr2d); i = i + 1) {
+    arr2d = [2.0, 4.0; 8.0, 10.0;];
+    for(int i = 0; i < length(arr2d); i = i + 1) {
         for(int j = 0; j < length(arr2d[0]); j = j + 1) {
             print_double(arr2d[i][j]);
         }
     }
 }
+
+/* Expected:
+5
+10
+15
+a
+b
+c
+d
+1
+2
+3
+2.0
+4.0
+8.0
+10.0
+*/

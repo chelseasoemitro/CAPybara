@@ -1,5 +1,0 @@
-void main() {
-	bool b;
-	b = true;
-	print_bool(b);
-}

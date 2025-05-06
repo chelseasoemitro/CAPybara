@@ -3,18 +3,18 @@ int[2][2] global_arr2d;
 
 void main() {
     // Global
-
     for(int i = 0; i < length(global_arr1d); i = i + 1) {
         global_arr1d[i] = i; 
     }
-    
+
+
     for(int i = 0; i < length(global_arr1d); i = i + 1) {
         print_int(global_arr1d[i]);
     }
 
     for(int i = 0; i < length(global_arr2d); i = i + 1) {
         for(int j = 0; j < length(global_arr2d[0]); j = j + 1) {
-            arr2d[i][j] = i + j; 
+            global_arr2d[i][j] = i + j; 
         }
     }
 
@@ -36,7 +36,7 @@ void main() {
         print_int(arr1d[i]);
     }
 
-    int[2][2] arr2d; 
+    int[2][2] arr2d;
 
     for(int i = 0; i < length(arr2d); i = i + 1) {
         for(int j = 0; j < length(arr2d[0]); j = j + 1) {

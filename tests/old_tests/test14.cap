@@ -1,9 +1,0 @@
-void main() {
-int x = 0;
-while (true) {
-	if(x == 15) {
-		break;
-	}
-}
-	print_int(x);
-}

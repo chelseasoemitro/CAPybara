@@ -6,5 +6,5 @@ void main() {
 			break;
 		}
 	}
-	print_int(x);
+	print_int(x); // 15
 }

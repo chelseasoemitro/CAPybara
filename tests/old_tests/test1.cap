@@ -1,5 +1,0 @@
-void main() {
-	int x;
-	x = 7;
-	print_int(x);
-}

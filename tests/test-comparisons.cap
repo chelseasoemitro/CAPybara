@@ -7,4 +7,4 @@ void main() {
     print_bool(1.5 != 1.5);
 }
 
-// expected: true, true, false, false, true, false
+/* expected: true, true, false, false, true, false */

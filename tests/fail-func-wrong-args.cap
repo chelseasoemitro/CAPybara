@@ -1,17 +1,11 @@
-float floaty(float x) {
+double doubly(double x) {
     return x + 5.0;
-}
-
-float wrong_args() {
-    return 5.0;
 }
 
 void main() {
 	int x = 5;
-	float y = 5.0;
+	double y = 5.0;
 
-    // fails - floaty takes a float
-    y = floaty(x);
-
-	print_int(x); 
+    // fails - doubly takes a double
+    y = doubly(x);
 }

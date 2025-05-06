@@ -1,4 +1,4 @@
-char[2][3] arr2d_global = ['h', 'e', 'y'; 'b', 'y', e'];
+char[2][3] arr2d_global = ['h', 'e', 'y'; 'b', 'y', 'e';];
 
 void main() {
     // Global
@@ -10,9 +10,9 @@ void main() {
     }
 
     // Local
-    double[3][3] arr2d_local = [1.0, 2.0, 3.0; 4.0, 5.0, 6.0; 7.0, 8.0, 9.0;]
+    double[3][3] arr2d_local = [1.0, 2.0, 3.0; 4.0, 5.0, 6.0; 7.0, 8.0, 9.0;];
 
-    double[3][3] transposed_2d_local = transpose(transposed_2d_local);
+    double[3][3] transposed_2d_local = transpose(arr2d_local);
     for(int i = 0; i < length(transposed_2d_local); i = i + 1) {
         for(int j = 0; j < length(transposed_2d_local[0]); j = j + 1) {
             print_double(transposed_2d_local[i][j]);

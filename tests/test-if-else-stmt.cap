@@ -17,3 +17,10 @@ void main() {
 		print_str("hi");
 	} 
 }
+
+/*
+Expected output:
+true
+false
+hi
+*/

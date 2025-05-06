@@ -1,6 +1,6 @@
 void main() {
     // doesn't work
-	for(int i; i < 5; i++) { // declaration but no initialization for stmnt1
+	for(int i; i < 5; i = i + 1) { // declaration but no initialization for stmnt1
 		print_int(x);
 	}
 }

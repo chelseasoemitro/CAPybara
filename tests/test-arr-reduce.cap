@@ -1,5 +1,5 @@
 double[4] arr1d_global = [5.0, 6.0, 7.0, 8.0];
-int[3][3] arr2d_global = [10, 11, 12; 13, 14, 15; 16, 17, 18;]
+int[3][3] arr2d_global = [10, 11, 12; 13, 14, 15; 16, 17, 18;];
 
 int add(int x, int y) {
     return x + y;
@@ -12,22 +12,22 @@ double multiply(double x, double y) {
 void main() {
     // Global
     double reduced_1d_global = reduce(arr1d_global, multiply);
-    print_double(reduced_1d_global);
+    print_double(reduced_1d_global); // 1680.0
 
     int[3] reduced_2d_global = reduce(arr2d_global, add);
     for(int i = 0; i < length(reduced_2d_global); i = i + 1) {
-        print_int(reduced_2d_global[i]);
+        print_int(reduced_2d_global[i]); // [33, 42, 51]
     }
 
     // Locals
     int[4] arr1d_local = [1, 2, 3, 4];
-    double[3][3] arr2d_local = [1.0, 2.0, 3.0; 4.0, 5.0, 6.0; 7.0, 8.0, 9.0;]
+    double[3][3] arr2d_local = [1.0, 2.0, 3.0; 4.0, 5.0, 6.0; 7.0, 8.0, 9.0;];
 
     int reduced_1d_local = reduce(arr1d_local, add);
-    print_int(reduced_1d_local);
+    print_int(reduced_1d_local); // 10
 
-    double[3] reduced_2d_local = reduce(arr2d_local, multiply);
+    double[3] reduced_2d_local = reduce(arr2d_local, multiply); // [6, 120, 504]
     for(int i = 0; i < length(reduced_2d_local); i = i + 1) {
-        print_double(reduced_2d_local[i]);
+        print_double(reduced_2d_local[i]); 
     }
 }

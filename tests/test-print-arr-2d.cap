@@ -13,7 +13,7 @@ void main() {
 	
     for(int m = 0; m < length(array_local); m = m + 1) {
         for(int n = 0; n < length(array_local[0]); n = n + 1) {
-            print_double(array_local[i][j]);
+            print_double(array_local[m][n]);
         }
     }
 

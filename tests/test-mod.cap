@@ -4,6 +4,6 @@ double double_global = 7.5;
 void main() {
     int int_local = 2;
     double double_local = 3.0;
-    print_int(int_global % int_local);
-    print_double(double_global % double_local);
+    print_int(int_global % int_local); // 1
+    print_double(double_global % double_local); // 1.5
 }

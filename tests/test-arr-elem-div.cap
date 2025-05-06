@@ -1,23 +1,23 @@
-int[4] arr1d_global = [5, 6, 8, 15];
-int[3][3] arr2d_global = [3, 8, 6; 8, 10, 12; 21, 16, 18;]
+double[4] arr1d_global = [5.0, 6.0, 8.0, 15.0];
+double[3][3] arr2d_global = [3.0, 8.0, 6.0; 8.0, 10.0, 12.0; 21.0, 16.0, 18.0;];
 
 void main() {
-    int[4] arr1d_local = [1, 2, 4, 3];
-    int[3][3] arr2d_local = [1, 2, 3; 4, 5, 6; 7, 8, 9;]
+    double[4] arr1d_local = [1.0, 2.0, 4.0, 3.0];
+    double[3][3] arr2d_local = [1.0, 2.0, 3.0; 4.0, 5.0, 6.0; 7.0, 8.0, 9.0;];
 	
     // 1D Division
-    int[4] res_1d = arr1d_local / arr1d_global;
+    double[4] res_1d = arr1d_global / arr1d_local; // [5.0, 3.0, 2.0, 5.0]
 
     for(int i = 0; i < length(res_1d); i = i + 1) {
-        print_int(res_1d[i]);
+        print_double(res_1d[i]);
     }
 
     // 2D Division
-    int[3][3] res_2d = arr2d_local / arr2d_global;
+    double[3][3] res_2d = arr2d_global / arr2d_local; // [3.0, 4.0, 3.0; 2.0, 2.0, 2.0; 3.0, 2.0, 2.0]
 
     for(int i = 0; i < length(res_2d); i = i + 1) {
         for(int j = 0; j < length(res_2d[0]); j = j + 1) {
-            print_int(res_2d[i][j]);
+            print_double(res_2d[i][j]);
         }
     }
 }

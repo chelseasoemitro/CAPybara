@@ -1,9 +1,9 @@
 int[4] arr1d_global = [5, 6, 7, 8];
-int[3][3] arr2d_global = [10, 11, 12; 13, 14, 15; 16, 17, 18;]
+int[3][3] arr2d_global = [10, 11, 12; 13, 14, 15; 16, 17, 18;];
 
 void main() {
     int[4] arr1d_local = [1, 2, 3, 4];
-    int[3][3] arr2d_local = [1, 2, 3; 4, 5, 6; 7, 8, 9;]
+    int[3][3] arr2d_local = [1, 2, 3; 4, 5, 6; 7, 8, 9;];
 	
     // 1D Addition
     int[4] res_1d = arr1d_local + arr1d_global;

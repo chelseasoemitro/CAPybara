@@ -1,17 +1,11 @@
-float floaty(float x) {
-    return x + 5.0;
-}
-
-float wrong_args() {
+double wrong_args() {
     return 5.0;
 }
 
 void main() {
 	int x = 5;
-	float y = 5.0;
+	double y = 5.0;
 
     // fails - too many arguments
     y = wrong_args(y);
-
-	print_int(x); 
 }

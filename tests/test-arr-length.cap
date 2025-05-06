@@ -3,15 +3,15 @@ double[2][3] arr2d_global = [1.0, 2.0, 3.0; 4.0, 5.0, 6.0;];
 
 void main() {
     // Global
-    print_int(length(arr1d_global));
-    print_int(length(arr2d_global));
-    print_int(length(arr2d_global[0]));
+    print_int(length(arr1d_global)); // 4
+    print_int(length(arr2d_global)); // 2
+    print_int(length(arr2d_global[0])); // 3
 
     // Local
-    int[4] arr1d_local = [1, 2, 3, 4];
+    int[4] arr1d_local = [1, 2, 3, 4]; 
     int[3][2] arr2d_local = [1, 2; 3, 4; 5, 6;];
    
-    print_int(length(arr1d_local));
-    print_int(length(arr2d_local));
-    print_int(length(arr2d_local[0]));
+    print_int(length(arr1d_local)); // 4
+    print_int(length(arr2d_local)); // 3 
+    print_int(length(arr2d_local[0])); // 2 
 }

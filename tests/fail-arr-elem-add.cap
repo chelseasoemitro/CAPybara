@@ -1,5 +1,5 @@
 void main() {
-    int a[3] = [1, 2, 3]; 
-    int b[2]= [1, 2]; 
-    int c[3] = a + b; // doesn't work, mismatched dimensions (length 3 vs. 2)
+    int[3] a = [1, 2, 3]; 
+    int[2] b = [1, 2]; 
+    int[3] c = a + b; // doesn't work, mismatched dimensions (length 3 vs. 2)
 }
