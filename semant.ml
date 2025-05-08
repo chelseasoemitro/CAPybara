@@ -493,14 +493,21 @@ let check (globals, functions) =
       | Break -> (SBreak, symtab)
       | VDecl v ->
         match v with
-          | BindDecl(typ, id) -> (SVDecl(SBindDecl(typ, id)), StringMap.add id typ symtab)
+          | BindDecl(typ, id) -> 
+            if StringMap.mem id symtab then
+              raise (Failure ("Variable " ^ id ^ " is already declared"))
+            else
+              (SVDecl(SBindDecl(typ, id)), StringMap.add id typ symtab)
           | BindInit((typ, id), e) ->
             let rt, e' = check_expr e symtab in
             let err = "illegal assignment " ^ string_of_typ typ ^ " = " ^
                 string_of_typ rt ^ " in " ^ string_of_expr e
             in 
             let _ = check_assign typ rt err in
-            (SVDecl(SBindInit((typ, id), (rt, e'))), StringMap.add id typ symtab)
+            if StringMap.mem id symtab then
+              raise (Failure ("Variable " ^ id ^ " is already declared"))
+            else
+              (SVDecl(SBindInit((typ, id), (rt, e'))), StringMap.add id typ symtab)
     in (* body of check_func *)
     { srtyp = func.rtyp;
       sfname = func.fname;
@@ -508,7 +515,6 @@ let check (globals, functions) =
       sbody = check_stmt_list func.body symbols;
     }
   in
-
 
 (* check the exprs on RHS of global BindInits are only literals *)
   let check_expr_global e symtab =
@@ -540,7 +546,11 @@ let check (globals, functions) =
   (* Create sbinds from all of the globals, checking BindInit types while doing so *)
   let check_global_binds global =
     (* Build local symbol table of variables for this function *)
-    let global_symtab = List.fold_left (fun m (ty, name) -> StringMap.add name ty m)
+    let global_symtab = List.fold_left (fun m (ty, name) ->
+        if StringMap.mem name m then
+          raise (Failure ("Variable " ^ name ^ " is already declared"))
+        else
+          StringMap.add name ty m)
         StringMap.empty ( global_binds )
     in
     match global with
