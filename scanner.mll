@@ -70,7 +70,7 @@ rule token = parse
 | digit+ ('.' digit+)? as lem                   { DOUBLE_LIT(float_of_string lem) }
 | "true"                                        { BOOL_LIT(true) }
 | "false"                                       { BOOL_LIT(false) }
-| '\'' (ascii_char as lem) '\''                 { CHAR_LIT(lem)}
+| '\'' ((ascii_char | escape_char) as lem) '\'' { CHAR_LIT(String.get (Scanf.unescaped lem) 0)}
 | '"' ((ascii_char | escape_char)* as lem) '"'  { STRING_LIT(Scanf.unescaped lem) }
 
 (* Array operators *)
