@@ -267,36 +267,63 @@ let translate (globals, functions) =
       | SArr1DLit elems ->
          (* get the types *)
         let (elem_typ, _) = List.hd elems in
+        let n = List.length elems in
         let llvm_elem_ty = ltype_of_typ elem_typ in
+        let arr_ty = L.array_type llvm_elem_ty n in
+
         (* create the array *)
-        let const_vals = Array.map (map_to_const_llvm) (Array.of_list elems) in  (* contruct all of the literals *) 
-        let arr_const = L.const_array llvm_elem_ty const_vals in
-        (* put the constant somewhere (stack is fine) and return its address *)
-        let alloca_ptr = L.build_alloca (L.type_of arr_const) "_arr1d_lit" builder in
-        ignore (L.build_store arr_const alloca_ptr builder); (* store pointer address *)
-        alloca_ptr 
-        (* return a pointer to the array *)
+        let alloca_ptr = L.build_alloca arr_ty "_arr1d_lit" builder in
+
+        List.iteri (fun i (typ, expr) ->
+          (* 1) compute the i’th element *)
+          let v = build_expr builder local_vars (typ, expr) in
+        
+          (* 2) get pointer to element i *)
+          let gep = 
+            L.build_in_bounds_gep
+              alloca_ptr
+              [| L.const_int i32_t 0; L.const_int i32_t i |]
+              "_arr_lit_gep"
+              builder
+          in
+        
+          (* 3) store the element *)
+          ignore (L.build_store v gep builder)
+        ) elems;
+        alloca_ptr  (* return a pointer to the array *)
       | SArr2DLit elems_list ->
         (* get the types *)
         (match elems_list with
           | ((elems_typ, _) :: _) :: _ ->
+            (* m = #rows, n = #cols *)
+            let m = List.length elems_list in
             let n  = List.length (List.hd elems_list) in
             let llvm_elem_ty = ltype_of_typ elems_typ in
+            let row_ty = L.array_type llvm_elem_ty n in
+            let arr_ty = L.array_type row_ty m in
 
-            let build_row row =
-              let consts = Array.map map_to_const_llvm (Array.of_list row) in   (* constructed llvalue array *)
-              L.const_array llvm_elem_ty consts          (* array of n x T *)
-            in
+            (* create the array *)
+            let alloca_ptr = L.build_alloca arr_ty "_arr2d_lit" builder in
+            
+            (* for each element, compute and store *)
+            List.iteri (fun i row ->
+              List.iteri (fun j (ty, expr) ->
+                let v = build_expr builder local_vars (ty, expr) in
 
-            (* build array of constant rows *)
-            let row_consts : L.llvalue array =
-              Array.map build_row (Array.of_list elems_list)    (* m x [n x T] *)
-            in
-            let row_ty = L.array_type llvm_elem_ty n  in     (* [n x T] type *)
-            let arr_const = L.const_array row_ty row_consts in (* return the pointer to an array of [m x [n x T]] made of row_consts values *)
-            let alloca_ptr = L.build_alloca (L.type_of arr_const) "_arr2d_lit" builder in
-            ignore (L.build_store arr_const alloca_ptr builder);
-            alloca_ptr
+                let gep = L.build_in_bounds_gep
+                  alloca_ptr
+                  [| L.const_int i32_t 0
+                  ; L.const_int i32_t i
+                  ; L.const_int i32_t j
+                  |]
+                  "_arr2d_gep"
+                  builder
+                in
+
+                ignore (L.build_store v gep builder)
+              ) row
+            ) elems_list;
+            alloca_ptr  (* return a pointer to the array *)
           | _ -> raise (Failure "empty 2-D array literal")) 
       | SId s -> 
         let is_arr = 
@@ -535,9 +562,13 @@ let translate (globals, functions) =
           "printf" builder
       | SCall (f, args) ->
         let (fdef, fdecl) = StringMap.find f function_decls in
-        let llargs = List.rev (List.map (build_expr builder local_vars) (List.rev args)) in (* TODO this call may be wrong now *)
-        let result = f ^ "_result" in
-        L.build_call fdef (Array.of_list llargs) result builder
+        let llargs = List.rev (List.map (build_expr builder local_vars) (List.rev args)) in
+        (match fdecl.srtyp with
+          | A.Void -> L.build_call fdef (Array.of_list llargs) "" builder
+          | _ -> 
+            let result = f ^ "_result" in
+            L.build_call fdef (Array.of_list llargs) result builder
+        )
     and 
     
     build_arr1d_add builder local_vars arr1_se arr2_se =
