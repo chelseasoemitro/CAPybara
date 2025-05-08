@@ -3,12 +3,14 @@
 # test-runner.sh
 # Runs all CAPybara tests in ./tests
 #  - Tests named fail-* must print an error starting with "Fatal error:" and exit non-zero
-#  - All other tests must compile successfully; we run them but don’t check their exit code
+#  - All other tests must compile successfully; we run them and then delete the generated binary
 
 TEST_DIR="tests"
 
 for test_path in "$TEST_DIR"/*; do
   test_name=$(basename "$test_path")
+  base="${test_name%.cap}"    # strip the .cap suffix
+
   if [[ "$test_name" == fail-* ]]; then
     echo "=== $test_name (expected failure) ==="
     output=$(./capybara.native -c "$test_path" 2>&1)
@@ -33,8 +35,12 @@ for test_path in "$TEST_DIR"/*; do
       continue
     fi
 
-    # Run silently
-    lli a.out > /dev/null 2>&1
+    # run the freshly-generated program (named $base)
+    echo "Running $base"
+    lli "$base" > /dev/null 2>&1
     echo "PASS: $test_name"
+
+    # clean up
+    rm -f "$TEST_DIR"/"$base"
   fi
 done

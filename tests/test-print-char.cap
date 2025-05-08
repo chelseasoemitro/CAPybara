@@ -6,6 +6,6 @@ void main() {
 
     // Local
 	char char_local;
-    char_local = 'c';
+    char_local = '\n';
     print_char(char_local);
 }
