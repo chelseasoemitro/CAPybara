@@ -262,9 +262,9 @@ let translate (globals, functions) =
         let () = 
           (match t with
             | Arr1D (ty, len) ->
-              ignore(arr_1d_memcpy builder len local p);
+              ignore(arr_1d_memcpy builder len p local);
             | Arr2D (ty, row, col) -> 
-              ignore(arr_2d_memcpy builder row col local p);
+              ignore(arr_2d_memcpy builder row col p local);
             | _ -> 
               ignore (L.build_store p local builder);
           ) in
