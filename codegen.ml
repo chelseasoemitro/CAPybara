@@ -235,7 +235,7 @@ let translate (globals, functions) =
         |> Array.of_list
       in 
       let rtyp = (match fdecl.srtyp with 
-        | Arr1D _ | Arr2D _ -> L.void_type
+        | Arr1D _ | Arr2D _ -> void_t
         | _ -> ltype_of_typ fdecl.srtyp
       )
       in
@@ -270,20 +270,16 @@ let translate (globals, functions) =
     let formal_vars =
       let add_formal m (t, n) p =
         L.set_value_name n p;
-  
-        let base = ltype_of_typ t in
-        let local = L.build_alloca base n builder in 
-        ignore (L.build_store p local builder);
-        (* let () = 
-          (match t with
-            | Arr1D (ty, len) ->
-              ignore(arr_1d_memcpy builder len p local);
-            | Arr2D (ty, row, col) -> 
-              ignore(arr_2d_memcpy builder row col p local);
-            | _ -> 
-              ignore (L.build_store p local builder);
-          ) in *)
-        StringMap.add n local m
+
+        match t with
+        | A.Arr1D _ ->
+          StringMap.add n p m
+        | A.Arr2D _ -> 
+          StringMap.add n p m
+        | _ -> 
+          let local = L.build_alloca (ltype_of_typ t) n builder in 
+          ignore (L.build_store p local builder);
+          StringMap.add n local m
       in
       List.fold_left2 add_formal StringMap.empty fdecl.sformals
           (Array.to_list (L.params the_function))
@@ -614,7 +610,7 @@ let translate (globals, functions) =
 
             (* append a ptr to this new array onto list of args passed *)
             let appended_llargs = llargs @ [alloca_ptr] in
-            L.build_call fdef (Array.of_list appended_llargs) "" builder in 
+            ignore(L.build_call fdef (Array.of_list appended_llargs) "" builder);
             alloca_ptr
           | A.Arr2D (elem_ty, m, n) -> 
             let llvm_elem_ty = ltype_of_typ elem_ty in
@@ -625,7 +621,8 @@ let translate (globals, functions) =
             let alloca_ptr = L.build_alloca arr_ty "_arr2d_returned" builder in
             (* append a ptr to this new array onto list of args passed *)
             let appended_llargs = llargs @ [alloca_ptr] in
-            L.build_call fdef (Array.of_list appended_llargs) "" builder 
+            ignore(L.build_call fdef (Array.of_list appended_llargs) "" builder);
+            alloca_ptr
           | _ -> 
             let result = f ^ "_result" in
             L.build_call fdef (Array.of_list llargs) result builder
@@ -1797,13 +1794,13 @@ let translate (globals, functions) =
             (* look up the return array ptr formal to get the address *)
             let ret_ptr = lookup "arr1d_return_ptr" local_vars in
             (* memcpy e into this address, which is on the caller's stack *)
-            ignore(arr_1d_memcpy builder n e ret_ptr);
+            ignore(arr_1d_memcpy builder n (build_expr builder local_vars e) ret_ptr);
             L.build_ret_void builder
           | A.Arr2D(elem_ty, m, n) -> 
             (* look up the return array ptr formal to get the address *)
             let ret_ptr = lookup "arr2d_return_ptr" local_vars in
             (* memcpy e into this address, which is on the caller's stack *)
-            ignore(arr_2d_memcpy builder m n e ret_ptr);
+            ignore(arr_2d_memcpy builder m n (build_expr builder local_vars e) ret_ptr);
             L.build_ret_void builder
           | _ -> L.build_ret (build_expr builder local_vars e) builder);
           (builder, local_vars)

@@ -1,0 +1,60 @@
+// returning an array
+int[3] ret_arr_func_1d(int x) {
+    return [x,x+1,x+2];
+}
+
+// passing an array
+void print_arr_1d(int[3] arr) {
+    for(int i = 0; i < length(arr); i = i + 1) {
+        print_int(arr[i]);
+    }  
+}
+
+// passing and returning an array
+int[3] add_one_1d(int[3] arr) {
+    int[3] res; 
+    for (int i = 0; i < length(arr); i = i + 1) {
+        res[i] = arr[i] + 1;
+    }
+    return res;
+}
+
+// 2d returning an array
+int[4][2] ret_arr_func_2d(int x) {
+    return [x,x+1;x+2,x+3;x+4,x+5;x+6,x+7;];
+}
+
+// 2d passing an array
+void print_arr_2d(int[4][2] arr) {
+    for(int i = 0; i < length(arr); i = i + 1) {
+        for(int j = 0; j < length(arr[0]); j = j + 1) {
+            print_int(arr[i][j]);
+        }
+        print_str(",");
+    }  
+}
+
+// 2d passing and returning an array
+int[4][2] mult_two_2d(int[4][2] arr) {
+    int[4][2] res; 
+    for (int i = 0; i < length(arr); i = i + 1) {
+        for (int j = 0; j < length(arr[0]); j = j + 1)  {
+             res[i][j] = arr[i][j] * 2;
+        }
+    }
+    return res;
+}
+
+void main() {
+
+  int[3] temp = ret_arr_func_1d(2);
+  print_arr_1d(add_one_1d(temp)); // should print 3 4 5
+  print_str("\n");
+
+  print_arr_2d(mult_two_2d(ret_arr_func_2d(1))); 
+  /* 
+    creates and returns an array [1,2;3,4;5,6;7,8]
+    adds one to each element and returns a new array [2,4;6,8;10,12;14,16]
+    prints the new array
+  */
+}
