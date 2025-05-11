@@ -47,7 +47,7 @@ type sstmt =
 type sfunc_def = {
   srtyp: typ;
   sfname: string;
-  sformals: sbind_decl list; (* parameters *)
+  mutable sformals: sbind_decl list; (* parameters *)
   sbody: sstmt list;
 }
 

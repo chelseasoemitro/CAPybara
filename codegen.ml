@@ -141,17 +141,110 @@ let translate (globals, functions) =
   let printf_func : L.llvalue =
     L.declare_function "printf" printf_t the_module in
 
+  let arr_1d_memcpy builder len src_body_ptr dst_body_ptr  =
+    (* loop *)
+    for i = 0 to len - 1 do
+      let idx = L.const_int i32_t i in
+      (* load element *)
+      let src_gep =
+        L.build_in_bounds_gep src_body_ptr
+          [| L.const_int i32_t 0; idx |]
+          "src_gep" builder
+      in
+      let v = L.build_load src_gep "src_val" builder in
+
+      (* store *)
+      let dst_gep =
+        L.build_in_bounds_gep dst_body_ptr
+          [| L.const_int i32_t 0; idx |]
+          "dst_gep" builder
+      in
+      ignore (L.build_store v dst_gep builder)
+    done;
+
+    (* return the ptr to the memcpy'd array *)
+    dst_body_ptr
+  in
+
+  let arr_2d_memcpy builder m n src_body_ptr dst_body_ptr  =
+    (* loop *)
+    for i = 0 to m - 1 do
+      let i_idx = L.const_int i32_t i in
+      (* pointer to row i of source *)
+      let src_row_ptr =
+        L.build_in_bounds_gep src_body_ptr
+          [| L.const_int i32_t 0; i_idx |]
+          "src_row" builder
+      in
+      (* pointer to row i of dest *)
+      let dst_row_ptr =
+        L.build_in_bounds_gep dst_body_ptr
+          [| L.const_int i32_t 0; i_idx |]
+          "dst_row" builder
+      in
+  
+      for j = 0 to n - 1 do
+        let j_idx = L.const_int i32_t j in
+  
+        (* load src[i][j] *)
+        let src_elem_gep =
+          L.build_in_bounds_gep src_row_ptr
+            [| L.const_int i32_t 0; j_idx |]
+            "src_gep" builder
+        in
+        let v = L.build_load src_elem_gep "src_val" builder in
+  
+        (* store into dest[i][j] *)
+        let dst_elem_gep =
+          L.build_in_bounds_gep dst_row_ptr
+            [| L.const_int i32_t 0; j_idx |]
+            "dst_gep" builder
+        in
+        ignore (L.build_store v dst_elem_gep builder)
+      done
+    done;
+
+    (* return the ptr to the memcpy'd array *)
+    dst_body_ptr
+  in
+
   (* Define each function (arguments and return type) so we can
      call it even before we've created its body *)
   let function_decls : (L.llvalue * sfunc_def) StringMap.t =
+    let ll_sig_ty t =
+      let base = ltype_of_typ t in
+      match t with
+      | Arr1D _ | Arr2D _ -> L.pointer_type base
+      | _                 -> base
+    in
     let function_decl m fdecl =
-      let name = fdecl.sfname
-      and formal_types =
-        Array.of_list (List.map (fun (t,_) -> ltype_of_typ t) fdecl.sformals)
-      in let ftype = L.function_type (ltype_of_typ fdecl.srtyp) formal_types in
-      StringMap.add name (L.define_function name ftype the_module, fdecl) m in
-    List.fold_left function_decl StringMap.empty functions in
+      fdecl.sformals <- begin
+        match fdecl.srtyp with
+        | Arr1D (t, len)  -> fdecl.sformals @ [(Arr1D(t, len), "arr1d_return_ptr")]
+        | Arr2D (t, row, col) -> fdecl.sformals @ [(Arr2D(t, row, col), "arr2d_return_ptr")]
+        | _ -> fdecl.sformals
+        end;
 
+      (* helper to get pointers to arrays *)
+      let name = fdecl.sfname in
+
+      (* formals: lift any Arr1D/Arr2D to pointers *)
+      let formal_types =
+        fdecl.sformals
+        |> List.map (fun (t,_) -> ll_sig_ty t)
+        |> Array.of_list
+      in 
+      let rtyp = (match fdecl.srtyp with 
+        | Arr1D _ | Arr2D _ -> void_t
+        | _ -> ltype_of_typ fdecl.srtyp
+      )
+      in
+      let ftype = L.function_type rtyp formal_types in
+      StringMap.add name (L.define_function name ftype the_module, fdecl) m in
+    
+    List.fold_left function_decl StringMap.empty functions 
+  
+  in
 
   (* Fill in the body of the given function *)
   let build_function_body fdecl =
@@ -172,13 +265,21 @@ let translate (globals, functions) =
       Allocate each on the stack, initialize their value, if appropriate,
       and remember their values in the "formals" map. Locally declared
       variables in the function will be added to this map as they're 
-      encountered as statements *)
+      encountered as statements. Arrays will be passed by reference, meaning
+      their caller's pointer is used as local parameters. *)
     let formal_vars =
       let add_formal m (t, n) p =
         L.set_value_name n p;
-        let local = L.build_alloca (ltype_of_typ t) n builder in
-        ignore (L.build_store p local builder);
-        StringMap.add n local m
+
+        match t with
+        | A.Arr1D _ ->
+          StringMap.add n p m
+        | A.Arr2D _ -> 
+          StringMap.add n p m
+        | _ -> 
+          let local = L.build_alloca (ltype_of_typ t) n builder in 
+          ignore (L.build_store p local builder);
+          StringMap.add n local m
       in
       List.fold_left2 add_formal StringMap.empty fdecl.sformals
           (Array.to_list (L.params the_function))
@@ -188,73 +289,6 @@ let translate (globals, functions) =
        Check local names first, then global names *)
     let lookup n local_vars = try StringMap.find n local_vars
       with Not_found -> StringMap.find n global_vars
-    in
-
-    let arr_1d_memcpy builder local_vars len src_body_ptr dst_body_ptr  =
-      (* loop *)
-      for i = 0 to len - 1 do
-        let idx = L.const_int i32_t i in
-        (* load element *)
-        let src_gep =
-          L.build_in_bounds_gep src_body_ptr
-            [| L.const_int i32_t 0; idx |]
-            "src_gep" builder
-        in
-        let v = L.build_load src_gep "src_val" builder in
-
-        (* store *)
-        let dst_gep =
-          L.build_in_bounds_gep dst_body_ptr
-            [| L.const_int i32_t 0; idx |]
-            "dst_gep" builder
-        in
-        ignore (L.build_store v dst_gep builder)
-      done;
-
-      (* return the ptr to the memcpy'd array *)
-      dst_body_ptr
-    in
-
-    let arr_2d_memcpy builder local_vars m n src_body_ptr dst_body_ptr  =
-      (* loop *)
-      for i = 0 to m - 1 do
-        let i_idx = L.const_int i32_t i in
-        (* pointer to row i of source *)
-        let src_row_ptr =
-          L.build_in_bounds_gep src_body_ptr
-            [| L.const_int i32_t 0; i_idx |]
-            "src_row" builder
-        in
-        (* pointer to row i of dest *)
-        let dst_row_ptr =
-          L.build_in_bounds_gep dst_body_ptr
-            [| L.const_int i32_t 0; i_idx |]
-            "dst_row" builder
-        in
-    
-        for j = 0 to n - 1 do
-          let j_idx = L.const_int i32_t j in
-    
-          (* load src[i][j] *)
-          let src_elem_gep =
-            L.build_in_bounds_gep src_row_ptr
-              [| L.const_int i32_t 0; j_idx |]
-              "src_gep" builder
-          in
-          let v = L.build_load src_elem_gep "src_val" builder in
-    
-          (* store into dest[i][j] *)
-          let dst_elem_gep =
-            L.build_in_bounds_gep dst_row_ptr
-              [| L.const_int i32_t 0; j_idx |]
-              "dst_gep" builder
-          in
-          ignore (L.build_store v dst_elem_gep builder)
-        done
-      done;
-
-      (* return the ptr to the memcpy'd array *)
-      dst_body_ptr
     in
 
     (* Construct code for an expression; return its a pointer to where it's value is *)
@@ -341,9 +375,9 @@ let translate (globals, functions) =
         let () = 
           (match ty with
           | A.Arr1D (elem_ty, len) ->
-            ignore(arr_1d_memcpy builder local_vars len e' body_ptr)
+            ignore(arr_1d_memcpy builder len e' body_ptr)
           | A.Arr2D (elem_ty, m, n) ->
-            ignore(arr_2d_memcpy builder local_vars m n e' body_ptr)
+            ignore(arr_2d_memcpy builder m n e' body_ptr)
           | _ -> ignore(L.build_store e' (lookup s local_vars) builder)
           ) in
         e'
@@ -565,6 +599,30 @@ let translate (globals, functions) =
         let llargs = List.rev (List.map (build_expr builder local_vars) (List.rev args)) in
         (match fdecl.srtyp with
           | A.Void -> L.build_call fdef (Array.of_list llargs) "" builder
+          | A.Arr1D (elem_ty, n) -> 
+            (* allocate a new array *)
+            (* get the types *)
+            let llvm_elem_ty = ltype_of_typ elem_ty in
+            let arr_ty = L.array_type llvm_elem_ty n in
+
+            (* create the array *)
+            let alloca_ptr = L.build_alloca arr_ty "_arr1d_returned" builder in
+
+            (* append a ptr to this new array onto list of args passed *)
+            let appended_llargs = llargs @ [alloca_ptr] in
+            ignore(L.build_call fdef (Array.of_list appended_llargs) "" builder);
+            alloca_ptr
+          | A.Arr2D (elem_ty, m, n) -> 
+            let llvm_elem_ty = ltype_of_typ elem_ty in
+            let row_ty = L.array_type llvm_elem_ty n in
+            let arr_ty = L.array_type row_ty m in
+
+            (* create the array *)
+            let alloca_ptr = L.build_alloca arr_ty "_arr2d_returned" builder in
+            (* append a ptr to this new array onto list of args passed *)
+            let appended_llargs = llargs @ [alloca_ptr] in
+            ignore(L.build_call fdef (Array.of_list appended_llargs) "" builder);
+            alloca_ptr
           | _ -> 
             let result = f ^ "_result" in
             L.build_call fdef (Array.of_list llargs) result builder
@@ -1732,6 +1790,18 @@ let translate (globals, functions) =
       | SExpr e -> ignore(build_expr builder local_vars e); (builder, local_vars)
       | SReturn e -> ignore(match fdecl.srtyp with
            A.Void -> L.build_ret_void builder
+          | A.Arr1D(elem_ty, n) -> 
+            (* look up the return array ptr formal to get the address *)
+            let ret_ptr = lookup "arr1d_return_ptr" local_vars in
+            (* memcpy e into this address, which is on the caller's stack *)
+            ignore(arr_1d_memcpy builder n (build_expr builder local_vars e) ret_ptr);
+            L.build_ret_void builder
+          | A.Arr2D(elem_ty, m, n) -> 
+            (* look up the return array ptr formal to get the address *)
+            let ret_ptr = lookup "arr2d_return_ptr" local_vars in
+            (* memcpy e into this address, which is on the caller's stack *)
+            ignore(arr_2d_memcpy builder m n (build_expr builder local_vars e) ret_ptr);
+            L.build_ret_void builder
           | _ -> L.build_ret (build_expr builder local_vars e) builder);
           (builder, local_vars)
       | SIf (predicate, then_stmt, else_stmt) ->
@@ -1815,12 +1885,12 @@ let translate (globals, functions) =
             | A.Arr1D(elem_ty, len) ->
               let body_ptr, local_vars' = add_array_local local_vars na ty builder in
               (* always deep-copy literals AND variable sources *)
-              ignore(arr_1d_memcpy builder local_vars' len e' body_ptr);
+              ignore(arr_1d_memcpy builder len e' body_ptr);
               local_vars'
             | A.Arr2D (elem_ty, m, n) ->
               let body_ptr, local_vars' = add_array_local local_vars na ty builder in
               (* always deep-copy literals AND variable sources *)
-              ignore(arr_2d_memcpy builder local_vars' m n e' body_ptr);
+              ignore(arr_2d_memcpy builder m n e' body_ptr);
               local_vars'
             | _ -> (* for regular scalar types *)
               (* allocate the var, store the value, add it's addr to the map *)

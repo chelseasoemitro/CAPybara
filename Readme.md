@@ -1,12 +1,18 @@
-### Build the CAPybara parser
+### Build the CAPybara compiler
 
 ```
-ocamlbuild test.native
+make
 ```
 
-### Run the CAPybara parser
+### Compile and run a CAPybara file
 ```
-./test.native
+./capybara.native -c <program_name>.cap
+lli <program_name>
+```
+
+### Run the CAPybara test suite
+```
+bash test_runner.sh
 ```
 
 ### Compiler files
@@ -15,10 +21,10 @@ ocamlbuild test.native
 -  `capyparse.mly`: parser
 -  `sast.ml`: semantically-checked abstract syntax tree
 -  `semant.ml`: semantic checker
+-  `codegen.ml`: LLVM IR code generator
+-  `capybara.ml`: top-level of CAPybara compiler
+-  `Makefile`: Makefile for the CAPybara compiler
 
-### Other files
-
-- `test_parse.ml`: top-level file to test and run the scanner and parser
-- `test_semantic.ml`: top-level file to test and run the scanner, parser, and semantic analyzer
-- `example.cap`: a sample CAPybara source code
-- `example.out`: a sample parsed code of example.cap
+### Other files and directories
+- `tests/`: directory of test files
+- `test_runner.sh`: bash script for running all tests
