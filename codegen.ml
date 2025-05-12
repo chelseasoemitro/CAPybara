@@ -271,15 +271,24 @@ let translate (globals, functions) =
       let add_formal m (t, n) p =
         L.set_value_name n p;
 
-        match t with
-        | A.Arr1D _ ->
+        (match n with 
+        | "arr1d_return_ptr" | "arr2d_return_ptr" ->  (* pass return array ptrs as a ptr*)
           StringMap.add n p m
-        | A.Arr2D _ -> 
-          StringMap.add n p m
-        | _ -> 
+        | _ ->
           let local = L.build_alloca (ltype_of_typ t) n builder in 
-          ignore (L.build_store p local builder);
+          (* deep copy when the user passes arrays by value *)
+          let () = 
+            (match t with
+              | Arr1D (ty, len) ->
+                ignore(arr_1d_memcpy builder len p local);
+              | Arr2D (ty, row, col) -> 
+                ignore(arr_2d_memcpy builder row col p local);
+              | _ -> 
+                ignore (L.build_store p local builder);
+            ) in
+
           StringMap.add n local m
+        )
       in
       List.fold_left2 add_formal StringMap.empty fdecl.sformals
           (Array.to_list (L.params the_function))

@@ -7,6 +7,7 @@ int[3] ret_arr_func_1d(int x) {
 void print_arr_1d(int[3] arr) {
     for(int i = 0; i < length(arr); i = i + 1) {
         print_int(arr[i]);
+        arr[i] = 0; // should not modify the passed-in array
     }  
 }
 
@@ -31,7 +32,7 @@ void print_arr_2d(int[4][2] arr) {
             print_int(arr[i][j]);
         }
         print_str(",");
-    }  
+    } 
 }
 
 // 2d passing and returning an array
@@ -47,8 +48,13 @@ int[4][2] mult_two_2d(int[4][2] arr) {
 
 void main() {
 
-  int[3] temp = ret_arr_func_1d(2);
+  int[3] temp = ret_arr_func_1d(2); // [2, 3, 4]
   print_arr_1d(add_one_1d(temp)); // should print 3 4 5
+  print_str("\n");
+
+  int[3] temp2 = ret_arr_func_1d(6);
+  print_arr_1d(temp2); // [6, 7, 8]
+  print_arr_1d(temp2); // should print the same thing
   print_str("\n");
 
   print_arr_2d(mult_two_2d(ret_arr_func_2d(1))); 
