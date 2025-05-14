@@ -355,21 +355,19 @@ let check (globals, functions) =
         (match op, arr_typ with
         | Map, Arr1D (elem_typ, n) ->
           (match fd.formals, fd.rtyp with
-          | [(arg_typ, _)], ret_typ when arg_typ = elem_typ && ret_typ = elem_typ ->
-              (Arr1D (elem_typ, n), SArrOp (op, (arr_typ, arr_s), func_name))
+          | [(arg_typ, _)], ret_typ when arg_typ = elem_typ ->
+              (Arr1D (ret_typ, n), SArrOp (op, (arr_typ, arr_s), func_name))
           | _ ->
               raise (Failure (
-                "map function must take one argument of type " ^ string_of_typ elem_typ ^
-                " and return the same type in map(" ^ string_of_typ arr_typ ^ ", " ^ func_name ^ ")"
+                "map function must take argument of type " ^ string_of_typ elem_typ
               )))
         | Map, Arr2D (elem_typ, m, n) ->
           (match fd.formals, fd.rtyp with
-          | [(arg_typ, _)], ret_typ when arg_typ = elem_typ && ret_typ = elem_typ ->
-              (Arr2D (elem_typ, m, n), SArrOp (op, (arr_typ, arr_s), func_name))
+          | [(arg_typ, _)], ret_typ when arg_typ = elem_typ ->
+              (Arr2D (ret_typ, m, n), SArrOp (op, (arr_typ, arr_s), func_name))
           | _ ->
               raise (Failure (
-                "map function must take one argument of type " ^ string_of_typ elem_typ ^
-                " and return the same type in map(" ^ string_of_typ arr_typ ^ ", " ^ func_name ^ ")"
+                "map function must take one argument of type " ^ string_of_typ elem_typ
               )))
         | Reduce, Arr1D (elem_typ, n) ->
           (match fd.formals, fd.rtyp with

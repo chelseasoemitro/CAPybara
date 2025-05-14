@@ -550,12 +550,12 @@ let translate (globals, functions) =
         in
         (* retrieve the value at the index and return *)
         L.build_load arr_elem_gep "src_val" builder
-      | SArrOp (op, ((ty, arr_se) as arr_expr), func_name) -> 
+      | SArrOp (op, ((arr_ty, arr_se) as arr_expr), func_name) -> 
         (match op with
           | A.Map    ->
             (match ty with
-            | A.Arr1D (_) -> build_map_arr_1d builder local_vars arr_expr func_name
-            | A.Arr2D (_) -> build_map_arr_2d builder local_vars arr_expr func_name
+            | A.Arr1D (_) -> build_map_arr_1d builder local_vars arr_expr func_name ty
+            | A.Arr2D (_) -> build_map_arr_2d builder local_vars arr_expr func_name ty
             | _ -> raise (Failure("huh"))
             )
           | A.Reduce ->
@@ -1515,19 +1515,19 @@ let translate (globals, functions) =
     and
 
 
-    build_map_arr_1d builder local_vars (ty, sx) func_name =
+    build_map_arr_1d builder local_vars (ty, sx) func_name ret_ty =
       (* get ptrs and values *)
       let arr_ptr = build_expr builder local_vars (ty, sx) in
       let (fn_val, _) = StringMap.find func_name function_decls in
-      let elem_ty, n =
-        (match ty with
-          | A.Arr1D(elem_ty, n) -> elem_ty, n
+      let n =
+        (match ret_ty with
+          | A.Arr1D(_, n) -> n
           | _ -> raise (Failure "build_map_arr_1d: not a 1D array: ty: ")
         ) in
 
       (* allocate result [len x i32] *)
-      let llvm_arr_ty = ltype_of_typ ty in
-      let res_ptr = L.build_alloca llvm_arr_ty (func_name ^ "_map2d") builder in
+      let llvm_arr_ty = ltype_of_typ ret_ty in
+      let res_ptr = L.build_alloca llvm_arr_ty (func_name ^ "_map1d") builder in
 
       (* loop *)
       for i = 0 to n - 1 do
@@ -1557,18 +1557,18 @@ let translate (globals, functions) =
     and
 
 
-    build_map_arr_2d builder local_vars (ty, sx) func_name  =
+    build_map_arr_2d builder local_vars (ty, sx) func_name ret_ty =
       (* get ptrs and values *)
       let arr_ptr = build_expr builder local_vars (ty, sx) in
       let (fn_val, _) = StringMap.find func_name function_decls in
-      let elem_ty, m, n =
-        (match ty with
-          | A.Arr2D(elem_ty, m, n) -> elem_ty, m, n
+      let m, n =
+        (match ret_ty with
+          | A.Arr2D(_, m, n) -> m, n
           | _ -> raise (Failure "build_map_arr_2d: not a 2D array: ty: ")
         ) in
 
       (* allocate result [len x i32] *)
-      let llvm_arr_ty = ltype_of_typ ty in
+      let llvm_arr_ty = ltype_of_typ ret_ty in
       let res_ptr = L.build_alloca llvm_arr_ty (func_name ^ "_map2d") builder in
 
        (* loop *)
